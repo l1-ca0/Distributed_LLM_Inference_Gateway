@@ -6,11 +6,11 @@ cmake-build-*/
 *.so
 *.dylib
 
-# Executables
-gateway
-replica
-client
-test_driver
+# Executables (only in build directory, not source directories)
+/build/gateway
+/build/replica
+/build/client
+/build/test_driver
 
 # IDE
 .vscode/

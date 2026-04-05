@@ -6,18 +6,19 @@ A high-performance inference gateway in C++17 that routes client requests to a c
 
 ```
               Clients
-                 |  gRPC streaming (TCP)
+                 |  gRPC streaming
                  v
   +-------------------------------+
   |      Inference Gateway        |
   |  - Load Balancer              |
   |  - Request Queue              |
-  |  - Membership Subscriber  <........  gossip (UDP)
-  +------+-------+-------+-------+            :
-         |       |       |  gRPC (TCP)        :
-         v       v       v                    :
-      Rep 1 <-> Rep 2 <-> Rep 3  .............:
-              gossip (UDP)
+  |  - Membership Subscriber  <.........  gossip (UDP)
+  +------+-------+-------+-------+              :
+         |       |       |  gRPC streaming      :
+         v       v       v                      :
+      Rep 1 <-> Rep 2 <-> Rep 3  ...............:
+         \________|________/
+           gossip (UDP, full mesh)
 ```
 
 **Two communication layers:**
@@ -47,7 +48,15 @@ LLM backends are simulated -- each replica receives a prompt, waits a configurab
 
 ## Building
 
+Prerequisites: CMake (>= 3.16), a C++17 compiler, and `git`. No other dependencies are required -- gRPC and Protobuf are automatically downloaded and built from source.
+
 ```bash
 make all    # builds all binaries and runs the test suite
+```
+
+If you already have gRPC and Protobuf installed (e.g., via `brew install grpc protobuf`), you can speed up the build:
+
+```bash
+make all USE_SYSTEM_GRPC=ON
 ```
 
