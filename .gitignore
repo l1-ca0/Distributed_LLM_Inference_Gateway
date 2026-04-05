@@ -1,0 +1,32 @@
+# Build artifacts
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+
+# Executables
+gateway
+replica
+client
+test_driver
+
+# IDE
+.vscode/
+.claude/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+*.tex
+*.html
+*.md
+!README.md
+
