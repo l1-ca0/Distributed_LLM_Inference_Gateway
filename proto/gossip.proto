@@ -1,0 +1,35 @@
+syntax = "proto3";
+package llmgateway.gossip;
+
+enum MessageType {
+  PING = 0;
+  PING_REQ = 1;
+  ACK = 2;
+}
+
+enum MemberState {
+  ALIVE = 0;
+  SUSPECT = 1;
+  DEAD = 2;
+}
+
+// Core gossip message sent over UDP
+message GossipMessage {
+  MessageType type = 1;
+  string sender_id = 2;
+  string target_id = 3;       // for PING_REQ: who to probe
+  uint64 sequence_num = 4;
+
+  // Piggybacked membership updates (epidemic dissemination)
+  repeated MembershipUpdate updates = 5;
+}
+
+message MembershipUpdate {
+  string member_id = 1;
+  string address = 2;         // host:port
+  MemberState state = 3;
+  uint64 incarnation = 4;     // monotonic counter to resolve conflicts
+  string model_version = 5;
+  int32 active_requests = 6;  // piggybacked load info
+  int32 max_capacity = 7;
+}

@@ -1,0 +1,42 @@
+syntax = "proto3";
+package llmgateway;
+
+// Client <-> Gateway
+service InferenceGateway {
+  rpc Infer (InferRequest) returns (stream InferResponse);
+}
+
+// Gateway <-> Replica (inference + admin)
+service LLMReplica {
+  rpc Generate (GenerateRequest) returns (stream GenerateResponse);
+  rpc Drain (DrainRequest) returns (DrainResponse);
+}
+
+message InferRequest {
+  string client_id = 1;
+  string prompt = 2;
+  int32 max_tokens = 3;
+}
+
+message InferResponse {
+  string token = 1;
+  bool is_final = 2;
+  string replica_id = 3;
+}
+
+message GenerateRequest {
+  string request_id = 1;
+  string prompt = 2;
+  int32 max_tokens = 3;
+  int32 tokens_already_generated = 4;
+}
+
+message GenerateResponse {
+  string token = 1;
+  bool is_final = 2;
+}
+
+message DrainRequest {}
+message DrainResponse {
+  bool success = 1;
+}
