@@ -123,7 +123,10 @@ target_link_libraries(proto_lib PUBLIC grpc_deps)
 # Source targets
 # ============================================================================
 
-add_executable(replica src/replica/main.cpp)
+add_executable(replica
+  src/replica/main.cpp
+  src/replica/replica_server.cpp
+)
 target_include_directories(replica PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(replica PRIVATE proto_lib)
 
@@ -131,6 +134,9 @@ add_executable(gateway src/gateway/main.cpp)
 target_include_directories(gateway PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(gateway PRIVATE proto_lib)
 
-add_executable(client src/client/main.cpp)
+add_executable(client
+  src/client/main.cpp
+  src/client/client.cpp
+)
 target_include_directories(client PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(client PRIVATE proto_lib)
