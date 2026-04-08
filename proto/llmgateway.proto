@@ -16,6 +16,7 @@ message InferRequest {
   string client_id = 1;
   string prompt = 2;
   int32 max_tokens = 3;
+  bool hedge = 4;           // enable request hedging
 }
 
 message InferResponse {
