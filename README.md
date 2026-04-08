@@ -28,11 +28,32 @@ A high-performance inference gateway in C++17 that routes client requests to a c
 ## Features
 
 - **Gossip-based failure detection** -- SWIM protocol with indirect probing, suspicion mechanism, and incarnation number refutation. No centralized health monitor.
-- **Weighted least-connections load balancing** -- Routes requests to the least-loaded replica, with gossip-propagated load metadata for accurate routing decisions.
+- **KV-cache-aware load balancing with consistent hashing** -- Prompt-prefix affinity routing via a consistent hash ring. When a replica joins or leaves, only ~1/N of mappings are disrupted (preserving KV cache hit rates). Falls back to weighted least-connections when the preferred replica is at capacity.
+- **Circuit breaker** -- Detects degraded replicas (high error rate or slow responses) as a complement to gossip (which detects crashes). Automatically stops routing to unhealthy replicas and periodically probes for recovery.
 - **Token streaming** -- Gateway proxies tokens from replica to client as they are generated, supporting many concurrent streaming sessions.
-- **Mid-stream failover** -- If a replica dies during active token generation, the gateway transparently re-routes to another replica and resumes streaming.
+- **Mid-stream failover + request hedging** -- If a replica dies mid-stream, the gateway transparently re-routes to another replica. For latency-sensitive requests, speculative execution sends the request to two replicas and streams the faster response (inspired by Google's "The Tail at Scale").
 - **Backpressure** -- FIFO request queue with configurable per-replica concurrency limits. Overload returns an error rather than overwhelming replicas.
 - **Rolling updates** -- Drain a replica (finish in-flight requests, stop new ones), restart with a new model version, re-join via gossip. Zero dropped requests.
+
+## Relation to Production Systems
+
+The gateway + replicas + streaming + load balancing + failover pattern maps closely to real-world LLM serving infrastructure:
+
+| This Project | Production Equivalent |
+|---|---|
+| Gateway / Router | vLLM router, TGI router, Kubernetes Ingress |
+| Replicas | GPU pods running vLLM / TGI / TensorRT-LLM |
+| Health monitoring | Kubernetes liveness probes, Envoy health checks |
+| Load balancing | Least-connections or KV-cache-aware routing |
+| Backpressure / queuing | Request queues in vLLM, continuous batching |
+| Token streaming | SSE or gRPC streaming |
+
+Production LLM serving *requires* multiple replicas not for redundancy but for capacity -- a single GPU can only handle a handful of concurrent requests. Fault tolerance comes as a natural consequence.
+
+**Key simplifications in this project compared to production:**
+- No continuous batching (real servers like vLLM dynamically batch multiple requests on the same GPU)
+- No prefill/decode disaggregation (production systems may separate prompt processing from token generation onto different hardware)
+- Gossip-based health monitoring is a deliberate upgrade over centralized approaches -- production LLM serving typically relies on Kubernetes probes or Envoy health checks (single point of monitoring), while this project uses a SWIM gossip protocol that is fully decentralized, tolerates monitor failure, and scales better with cluster size. Gossip protocols are battle-tested in systems like Cassandra, Consul, and Serf.
 
 ## Tech Stack
 
