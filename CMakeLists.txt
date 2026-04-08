@@ -148,3 +148,8 @@ add_executable(client
 )
 target_include_directories(client PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(client PRIVATE proto_lib)
+
+# Unit tests for gossip components
+add_executable(test_gossip_unit tests/test_gossip_unit.cpp)
+target_include_directories(test_gossip_unit PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_gossip_unit PRIVATE gossip_lib)
