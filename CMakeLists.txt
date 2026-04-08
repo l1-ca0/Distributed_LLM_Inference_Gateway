@@ -119,6 +119,14 @@ add_library(proto_lib STATIC
 target_include_directories(proto_lib PUBLIC ${PROTO_GEN_DIR})
 target_link_libraries(proto_lib PUBLIC grpc_deps)
 
+# Gossip library (SWIM protocol, used by replica and gateway)
+add_library(gossip_lib STATIC
+  src/gossip/udp_transport.cpp
+  src/gossip/membership_list.cpp
+)
+target_include_directories(gossip_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(gossip_lib PUBLIC proto_lib)
+
 # ============================================================================
 # Source targets
 # ============================================================================
