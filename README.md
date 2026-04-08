@@ -1,6 +1,9 @@
 # Distributed LLM Inference Gateway
 
-A high-performance inference gateway in C++17 that routes client requests to a cluster of LLM serving replicas with load balancing, fault tolerance, and streaming token delivery. Replicas use a SWIM gossip protocol for decentralized membership and failure detection.
+A high-performance inference gateway in C++17 that routes client requests to a cluster of LLM serving replicas. The gateway provides KV-cache-aware routing via consistent hashing, weighted load balancing, fault tolerance with mid-
+stream failover and request hedging, circuit breaker for degraded replica detection, streaming token
+delivery, backpressure management, and zero-downtime rolling updates. Replicas participate in a
+SWIM gossip protocol for decentralized membership and failure detection.
 
 ## Architecture
 
@@ -50,10 +53,10 @@ The gateway + replicas + streaming + load balancing + failover pattern maps clos
 
 Production LLM serving *requires* multiple replicas not for redundancy but for capacity -- a single GPU can only handle a handful of concurrent requests. Fault tolerance comes as a natural consequence.
 
-**Key simplifications in this project compared to production:**
+**Key differences in this project compared to production:**
 - No continuous batching (real servers like vLLM dynamically batch multiple requests on the same GPU)
-- No prefill/decode disaggregation (production systems may separate prompt processing from token generation onto different hardware)
-- Gossip-based health monitoring is a deliberate upgrade over centralized approaches -- production LLM serving typically relies on Kubernetes probes or Envoy health checks (single point of monitoring), while this project uses a SWIM gossip protocol that is fully decentralized, tolerates monitor failure, and scales better with cluster size. Gossip protocols are battle-tested in systems like Cassandra, Consul, and Serf.
+- No prefill/decode disaggregation (production systems typicaly separate prompt processing from token generation onto different hardware)
+- Gossip-based health monitoring is a deliberate upgrade over centralized approaches -- production LLM serving typically relies on Kubernetes probes or Envoy health checks (single point of monitoring), while this project uses a SWIM gossip protocol that is fully decentralized, tolerates monitor failure, and scales better with cluster size. Gossip protocols are battle-tested in systems like Cassandra.
 
 ## Tech Stack
 
