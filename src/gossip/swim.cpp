@@ -70,7 +70,7 @@ void SwimProtocol::SetMyLoad(int32_t active_requests, int32_t max_capacity,
 }
 
 // ============================================================================
-// Sender thread: periodic PING rounds
+// Sender thread: periodic PING rounds with indirect probing
 // ============================================================================
 
 void SwimProtocol::SenderLoop() {
@@ -78,7 +78,7 @@ void SwimProtocol::SenderLoop() {
         auto round_start = std::chrono::steady_clock::now();
 
         DoPingRound();
-        // TODO: add suspect timeout checking.
+        CheckSuspectTimeouts();
 
         auto elapsed = std::chrono::steady_clock::now() - round_start;
         auto sleep_time = std::chrono::milliseconds(config_.protocol_period_ms) - elapsed;
@@ -89,7 +89,6 @@ void SwimProtocol::SenderLoop() {
 }
 
 void SwimProtocol::DoPingRound() {
-    // Pick a random alive peer.
     auto peer = membership_list_.GetRandomAlivePeer();
     if (!peer) return;
 
@@ -101,28 +100,83 @@ void SwimProtocol::DoPingRound() {
         pending_acks_[seq] = false;
     }
 
-    // Send PING.
     Address dest = ParseAddress(peer_info.address);
     SendMessage(dest, PING, "", seq);
 
-    // Wait for ACK.
     if (WaitForAck(seq, config_.ping_timeout_ms)) {
-        // Peer is alive.
         std::lock_guard lock(ack_mutex_);
         pending_acks_.erase(seq);
         return;
     }
 
-    LOG_WARN("swim", "%s: no ACK from %s, marking DEAD",
-             my_id_.c_str(), peer_id.c_str());
-    membership_list_.MarkDead(peer_id);
+    // Indirect probing: ask k random other peers to ping the suspect on our behalf.
+    std::vector<std::string> exclude = {peer_id};
+    std::vector<uint64_t> indirect_seqs;
 
-    std::lock_guard lock(ack_mutex_);
-    pending_acks_.erase(seq);
+    for (int i = 0; i < config_.indirect_ping_count; i++) {
+        auto proxy = membership_list_.GetRandomAlivePeer(exclude);
+        if (!proxy) break;
+
+        uint64_t indirect_seq = next_seq_num_.fetch_add(1);
+        {
+            std::lock_guard lock(ack_mutex_);
+            pending_acks_[indirect_seq] = false;
+        }
+
+        Address proxy_addr = ParseAddress(proxy->second.address);
+        SendMessage(proxy_addr, PING_REQ, peer_id, indirect_seq);
+        indirect_seqs.push_back(indirect_seq);
+
+        exclude.push_back(proxy->first);
+    }
+
+    // Wait for any indirect ACK.
+    bool got_indirect_ack = false;
+    if (!indirect_seqs.empty()) {
+        auto deadline = std::chrono::steady_clock::now() +
+                        std::chrono::milliseconds(config_.ping_timeout_ms);
+
+        std::unique_lock lock(ack_mutex_);
+        ack_cv_.wait_until(lock, deadline, [&]() {
+            for (uint64_t s : indirect_seqs) {
+                if (pending_acks_.count(s) && pending_acks_[s]) return true;
+            }
+            return false;
+        });
+
+        for (uint64_t s : indirect_seqs) {
+            if (pending_acks_.count(s) && pending_acks_[s]) {
+                got_indirect_ack = true;
+            }
+            pending_acks_.erase(s);
+        }
+    }
+
+    {
+        std::lock_guard lock(ack_mutex_);
+        pending_acks_.erase(seq);
+    }
+
+    if (got_indirect_ack) {
+        return;  // Indirect probe succeeded.
+    }
+
+    // Mark SUSPECT instead of DEAD — the node gets T_suspect to recover.
+    membership_list_.MarkSuspect(peer_id);
 }
 
+// Promote suspects to dead after T_suspect.
 void SwimProtocol::CheckSuspectTimeouts() {
-    // TODO: implement suspect timeout scanning.
+    auto suspects = membership_list_.GetMembersByState(SUSPECT);
+    auto now = std::chrono::steady_clock::now();
+
+    for (const auto& [id, info] : suspects) {
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now - info.suspect_time);
+        if (elapsed.count() >= config_.suspect_timeout_ms) {
+            membership_list_.MarkDead(id);
+        }
+    }
 }
 
 // ============================================================================
@@ -147,11 +201,13 @@ void SwimProtocol::HandleMessage(const GossipMessage& msg,
         case PING:
             HandlePing(msg, sender_addr);
             break;
+        case PING_REQ:
+            HandlePingReq(msg, sender_addr);
+            break;
         case ACK:
             HandleAck(msg);
             break;
         default:
-            // TODO: handle PING_REQ for indirect probing.
             break;
     }
 }
@@ -164,9 +220,30 @@ void SwimProtocol::HandlePing(const GossipMessage& msg,
     SendMessage(sender_addr, ACK, "", msg.sequence_num());
 }
 
+// Handle indirect probe requests.
+// We are a proxy: ping the target on behalf of the requester, relay ACK back.
 void SwimProtocol::HandlePingReq(const GossipMessage& msg,
                                  const Address& sender_addr) {
-    // TODO: implement indirect probe handling.
+    const auto& target_id = msg.target_id();
+    auto target_info = membership_list_.GetMember(target_id);
+    if (!target_info) return;
+
+    uint64_t probe_seq = next_seq_num_.fetch_add(1);
+    {
+        std::lock_guard lock(ack_mutex_);
+        pending_acks_[probe_seq] = false;
+    }
+
+    Address target_addr = ParseAddress(target_info->address);
+    SendMessage(target_addr, PING, "", probe_seq);
+
+    if (WaitForAck(probe_seq, config_.ping_timeout_ms)) {
+        // Target is alive — relay ACK back to requester.
+        SendMessage(sender_addr, ACK, "", msg.sequence_num());
+    }
+
+    std::lock_guard lock(ack_mutex_);
+    pending_acks_.erase(probe_seq);
 }
 
 void SwimProtocol::HandleAck(const GossipMessage& msg) {
@@ -181,7 +258,7 @@ void SwimProtocol::ProcessPiggybackedUpdates(const GossipMessage& msg) {
 }
 
 void SwimProtocol::CheckSelfRefutation(const MembershipUpdate& update) {
-    // TODO: implement indirect probe handling.
+    // TODO: implement self-refutation via incarnation increment.
 }
 
 // ============================================================================
@@ -196,14 +273,12 @@ void SwimProtocol::SendMessage(const Address& dest, MessageType type,
     msg.set_target_id(target_id);
     msg.set_sequence_num(seq_num);
 
-    // Piggyback recent membership updates.
     auto updates = membership_list_.GetUpdatesForPiggyback(
         config_.max_piggyback_updates);
     for (auto& update : updates) {
         *msg.add_updates() = std::move(update);
     }
 
-    // Piggyback own load metadata.
     {
         std::lock_guard lock(load_mutex_);
         auto* self_update = msg.add_updates();
