@@ -154,3 +154,8 @@ target_link_libraries(client PRIVATE proto_lib)
 add_executable(test_gossip_unit tests/test_gossip_unit.cpp)
 target_include_directories(test_gossip_unit PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_gossip_unit PRIVATE gossip_lib)
+
+# SWIM integration tests
+add_executable(test_swim_integration tests/test_swim_integration.cpp)
+target_include_directories(test_swim_integration PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_swim_integration PRIVATE gossip_lib)
