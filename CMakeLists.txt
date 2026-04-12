@@ -123,6 +123,7 @@ target_link_libraries(proto_lib PUBLIC grpc_deps)
 add_library(gossip_lib STATIC
   src/gossip/udp_transport.cpp
   src/gossip/membership_list.cpp
+  src/gossip/swim.cpp
 )
 target_include_directories(gossip_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(gossip_lib PUBLIC proto_lib)
