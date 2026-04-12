@@ -1,3 +1,27 @@
+// SWIM protocol implementation.
+//
+// Reference: Das et al., "SWIM: Scalable Weakly-consistent Infection-style
+// Process Group Membership Protocol", DSN 2002.
+//
+// Architecture:
+//   Two threads — a sender (periodic PING loop) and a receiver (UDP listen loop).
+//   They communicate via a pending_acks map with condition_variable notification.
+//   The sender waits for ACKs; the receiver deposits them.
+//
+// Failure detection pipeline (per protocol round):
+//   1. Select random alive peer → send PING
+//   2. If ACK received within T_ping → peer alive, done
+//   3. If no ACK → select k random proxies → send PING_REQ (indirect probe)
+//   4. If any proxy relays an ACK → peer alive, done
+//   5. If no indirect ACK → mark peer SUSPECT
+//   6. If peer stays SUSPECT for T_suspect → mark DEAD
+//   7. If peer receives its own SUSPECT → increment incarnation → refute
+//
+// Dissemination:
+//   Membership updates are piggybacked on every outgoing message (PING, ACK,
+//   PING_REQ). This provides O(log N) convergence without dedicated gossip
+//   rounds, using the protocol's existing message traffic as a carrier.
+
 #include "gossip/swim.h"
 
 #include <algorithm>
@@ -18,7 +42,6 @@ SwimProtocol::SwimProtocol(const std::string& my_id,
       config_(config),
       transport_(udp_port),
       membership_list_(my_id) {
-    // Add ourselves to the membership list.
     membership_list_.AddMember(my_id, my_address);
 }
 
@@ -30,6 +53,7 @@ void SwimProtocol::Start() {
     if (running_.load()) return;
     running_.store(true);
 
+    // Receiver must start before sender so incoming ACKs aren't missed.
     receiver_thread_ = std::thread(&SwimProtocol::ReceiverLoop, this);
     sender_thread_ = std::thread(&SwimProtocol::SenderLoop, this);
 
@@ -46,12 +70,15 @@ void SwimProtocol::Stop() {
     LOG_INFO("swim", "%s stopped", my_id_.c_str());
 }
 
+// Graceful leave: broadcast a DEAD message about ourselves so peers can
+// remove us instantly without waiting for the suspect timeout. This is an
+// optimization for rolling updates — drain → graceful leave → restart is
+// significantly faster than drain → crash detection → restart.
 void SwimProtocol::LeaveCluster() {
-    // Broadcast a DEAD message about ourselves to all alive peers.
-    // This allows instant removal without waiting for the suspect timeout.
     auto peers = membership_list_.GetAliveMembers();
 
-    // Create a DEAD update about ourselves with a high incarnation.
+    // Use incarnation + 1 to ensure this overrides any concurrent ALIVE
+    // messages that might be in-flight from our own piggybacked updates.
     MembershipUpdate leave_update;
     leave_update.set_member_id(my_id_);
     leave_update.set_address(my_address_);
@@ -60,7 +87,7 @@ void SwimProtocol::LeaveCluster() {
 
     for (const auto& [peer_id, peer_info] : peers) {
         GossipMessage msg;
-        msg.set_type(PING);  // Use PING so the peer processes piggybacked updates
+        msg.set_type(PING);
         msg.set_sender_id(my_id_);
         msg.set_sequence_num(next_seq_num_.fetch_add(1));
         *msg.add_updates() = leave_update;
@@ -72,13 +99,12 @@ void SwimProtocol::LeaveCluster() {
     LOG_INFO("swim", "%s sent graceful leave to %zu peers", my_id_.c_str(), peers.size());
 }
 
+// Bootstrap: add seed nodes so the first protocol round has peers to ping.
+// Seeds are added with a temporary "seed-<addr>" ID. The real ID is learned
+// when the seed responds and its sender_id is extracted from the PING/ACK.
 void SwimProtocol::JoinCluster(const std::vector<std::string>& seed_addresses) {
     for (const auto& addr : seed_addresses) {
-        // Don't add ourselves as a seed.
         if (addr == my_address_) continue;
-
-        // Derive a temporary ID from the address until we learn the real ID via gossip.
-        // The real ID will be learned when the seed responds with piggybacked updates.
         std::string seed_id = "seed-" + addr;
         membership_list_.AddMember(seed_id, addr);
     }
@@ -88,6 +114,8 @@ void SwimProtocol::SetMembershipCallback(MembershipCallback callback) {
     membership_list_.SetCallback(std::move(callback));
 }
 
+// Publish load metadata that will be piggybacked on outgoing gossip messages.
+// The gateway reads this to make load-aware routing decisions.
 void SwimProtocol::SetMyLoad(int32_t active_requests, int32_t max_capacity,
                              const std::string& model_version) {
     std::lock_guard lock(load_mutex_);
@@ -97,7 +125,13 @@ void SwimProtocol::SetMyLoad(int32_t active_requests, int32_t max_capacity,
 }
 
 // ============================================================================
-// Sender thread: periodic PING rounds
+// Sender thread
+//
+// Runs one "protocol round" every T_protocol milliseconds. Each round:
+//   1. Pings a random peer (direct probe)
+//   2. If no ACK, tries indirect probes through k other peers
+//   3. If still no ACK, marks the peer as SUSPECT
+//   4. Scans suspect list and promotes timed-out suspects to DEAD
 // ============================================================================
 
 void SwimProtocol::SenderLoop() {
@@ -107,7 +141,9 @@ void SwimProtocol::SenderLoop() {
         DoPingRound();
         CheckSuspectTimeouts();
 
-        // Sleep for the remainder of the protocol period.
+        // Maintain consistent round timing by sleeping for the remainder.
+        // If the round took longer than T_protocol (e.g., due to slow indirect
+        // probes), the next round starts immediately with no sleep.
         auto elapsed = std::chrono::steady_clock::now() - round_start;
         auto sleep_time = std::chrono::milliseconds(config_.protocol_period_ms) - elapsed;
         if (sleep_time > std::chrono::milliseconds(0)) {
@@ -117,34 +153,35 @@ void SwimProtocol::SenderLoop() {
 }
 
 void SwimProtocol::DoPingRound() {
-    // Pick a random alive peer.
+    // Step 1: Select a random alive peer to probe.
     auto peer = membership_list_.GetRandomAlivePeer();
-    if (!peer) return;  // No peers to ping.
+    if (!peer) return;
 
     const auto& [peer_id, peer_info] = *peer;
     uint64_t seq = next_seq_num_.fetch_add(1);
 
-    // Register pending ACK before sending.
+    // Register the pending ACK before sending, so the receiver thread can
+    // record it even if the response arrives very quickly.
     {
         std::lock_guard lock(ack_mutex_);
         pending_acks_[seq] = false;
     }
 
-    // Send PING.
+    // Step 2: Send direct PING.
     Address dest = ParseAddress(peer_info.address);
     SendMessage(dest, PING, "", seq);
 
-    // Wait for ACK.
+    // Step 3: Wait for direct ACK.
     if (WaitForAck(seq, config_.ping_timeout_ms)) {
-        // Direct ping succeeded — peer is alive.
-        // Clean up pending ACK.
         std::lock_guard lock(ack_mutex_);
         pending_acks_.erase(seq);
-        return;
+        return;  // Peer is alive.
     }
 
-    // Direct ping failed — try indirect probes.
-    // Pick k random other alive peers (excluding the suspect and ourselves).
+    // Step 4: Direct ping failed — try indirect probes.
+    // Ask k random other alive peers to ping the suspect on our behalf.
+    // This handles cases where the direct network path is temporarily broken
+    // but the suspect is reachable through other nodes.
     std::vector<std::string> exclude = {peer_id};
     std::vector<uint64_t> indirect_seqs;
 
@@ -165,10 +202,9 @@ void SwimProtocol::DoPingRound() {
         exclude.push_back(proxy->first);
     }
 
-    // Wait for any indirect ACK.
+    // Step 5: Wait for any indirect ACK (any one is enough to confirm alive).
     bool got_indirect_ack = false;
     if (!indirect_seqs.empty()) {
-        // Wait for the ping timeout — check if any indirect ACK arrived.
         auto deadline = std::chrono::steady_clock::now() +
                         std::chrono::milliseconds(config_.ping_timeout_ms);
 
@@ -188,21 +224,23 @@ void SwimProtocol::DoPingRound() {
         }
     }
 
-    // Clean up the original direct ping ACK entry.
     {
         std::lock_guard lock(ack_mutex_);
         pending_acks_.erase(seq);
     }
 
     if (got_indirect_ack) {
-        // Indirect probe succeeded — peer is alive.
-        return;
+        return;  // Indirect probe succeeded — peer is alive.
     }
 
-    // Both direct and indirect probes failed — mark suspect.
+    // Step 6: Both direct and indirect probes failed — mark SUSPECT.
+    // The peer gets T_suspect to refute (via incarnation increment) before
+    // being declared DEAD.
     membership_list_.MarkSuspect(peer_id);
 }
 
+// Scan the suspect list and promote any member that has been SUSPECT for
+// longer than T_suspect to DEAD. This runs once per protocol round.
 void SwimProtocol::CheckSuspectTimeouts() {
     auto suspects = membership_list_.GetMembersByState(SUSPECT);
     auto now = std::chrono::steady_clock::now();
@@ -217,12 +255,15 @@ void SwimProtocol::CheckSuspectTimeouts() {
 }
 
 // ============================================================================
-// Receiver thread: listen for incoming messages
+// Receiver thread
+//
+// Listens for incoming UDP messages and dispatches to the appropriate handler.
+// Runs continuously with a 100ms receive timeout to allow clean shutdown.
 // ============================================================================
 
 void SwimProtocol::ReceiverLoop() {
     while (running_.load()) {
-        auto result = transport_.Receive(100);  // 100ms timeout
+        auto result = transport_.Receive(100);
         if (!result) continue;
 
         auto& [msg, sender_addr] = *result;
@@ -232,7 +273,9 @@ void SwimProtocol::ReceiverLoop() {
 
 void SwimProtocol::HandleMessage(const GossipMessage& msg,
                                  const Address& sender_addr) {
-    // Always process piggybacked membership updates first.
+    // Always process piggybacked membership updates first, regardless of
+    // message type. This is how SWIM achieves epidemic dissemination —
+    // every message carries state updates as a "free" side channel.
     ProcessPiggybackedUpdates(msg);
 
     switch (msg.type()) {
@@ -250,26 +293,27 @@ void SwimProtocol::HandleMessage(const GossipMessage& msg,
     }
 }
 
+// PING handler: learn the sender's identity and reply with ACK.
+// The sender's real ID is extracted from the message, replacing any
+// temporary "seed-<addr>" ID we may have assigned during bootstrap.
 void SwimProtocol::HandlePing(const GossipMessage& msg,
                               const Address& sender_addr) {
-    // Learn the sender's real ID and address.
     if (!msg.sender_id().empty()) {
         membership_list_.AddMember(msg.sender_id(), sender_addr.ToString());
     }
-
-    // Reply with ACK (same sequence number).
     SendMessage(sender_addr, ACK, "", msg.sequence_num());
 }
 
+// PING_REQ handler: we are acting as a proxy for indirect probing.
+// Forward a PING to the target, and if we get an ACK, relay it back
+// to the original requester. This enables failure detection even when
+// the direct path between the requester and target is broken.
 void SwimProtocol::HandlePingReq(const GossipMessage& msg,
                                  const Address& sender_addr) {
-    // We are a proxy: forward PING to the target, and if we get an ACK,
-    // relay it back to the original sender.
     const auto& target_id = msg.target_id();
     auto target_info = membership_list_.GetMember(target_id);
-    if (!target_info) return;  // Unknown target.
+    if (!target_info) return;
 
-    // Send PING to the target.
     uint64_t probe_seq = next_seq_num_.fetch_add(1);
     {
         std::lock_guard lock(ack_mutex_);
@@ -279,13 +323,12 @@ void SwimProtocol::HandlePingReq(const GossipMessage& msg,
     Address target_addr = ParseAddress(target_info->address);
     SendMessage(target_addr, PING, "", probe_seq);
 
-    // Wait for ACK from target.
     if (WaitForAck(probe_seq, config_.ping_timeout_ms)) {
-        // Target is alive — relay ACK back to the original requester.
+        // Target is alive — relay ACK back to the original requester
+        // using their original sequence number so they can match it.
         SendMessage(sender_addr, ACK, "", msg.sequence_num());
     }
 
-    // Clean up.
     std::lock_guard lock(ack_mutex_);
     pending_acks_.erase(probe_seq);
 }
@@ -294,28 +337,48 @@ void SwimProtocol::HandleAck(const GossipMessage& msg) {
     RecordAck(msg.sequence_num());
 }
 
+// Process piggybacked membership updates from an incoming message.
+// Before applying each update, check if it's a suspicion about ourselves
+// that needs to be refuted.
 void SwimProtocol::ProcessPiggybackedUpdates(const GossipMessage& msg) {
     for (const auto& update : msg.updates()) {
-        // Check for self-refutation before applying.
         CheckSelfRefutation(update);
-
         membership_list_.ApplyUpdate(update);
     }
 }
 
+// Self-refutation: if another node thinks we are SUSPECT or DEAD,
+// increment our incarnation number to override the false suspicion.
+// The incremented incarnation will be piggybacked on our next outgoing
+// message, propagating the refutation through the cluster.
+//
+// This is the key mechanism that prevents false positives in SWIM:
+// a slow-but-alive node can always clear its own suspicion by proving
+// it's still running (via a higher incarnation number).
 void SwimProtocol::CheckSelfRefutation(const MembershipUpdate& update) {
     if (update.member_id() != my_id_) return;
 
-    // Someone thinks we are SUSPECT or DEAD — refute by incrementing incarnation.
     if (update.state() == SUSPECT || update.state() == DEAD) {
         if (update.incarnation() >= membership_list_.my_incarnation()) {
             membership_list_.IncrementMyIncarnation();
+            LOG_INFO("swim", "%s refuting %s at incarnation %lu → %lu",
+                     my_id_.c_str(),
+                     update.state() == SUSPECT ? "SUSPECT" : "DEAD",
+                     update.incarnation(),
+                     membership_list_.my_incarnation());
         }
     }
 }
 
 // ============================================================================
-// Message sending with piggybacked updates
+// Message sending
+//
+// Every outgoing message carries two types of piggybacked data:
+//   1. Recent membership updates from the piggyback buffer (epidemic dissemination)
+//   2. Our own load metadata (active_requests, max_capacity, model_version)
+//
+// This means every PING, ACK, and PING_REQ doubles as a gossip vector,
+// spreading membership and load information without dedicated gossip rounds.
 // ============================================================================
 
 void SwimProtocol::SendMessage(const Address& dest, MessageType type,
@@ -326,14 +389,15 @@ void SwimProtocol::SendMessage(const Address& dest, MessageType type,
     msg.set_target_id(target_id);
     msg.set_sequence_num(seq_num);
 
-    // Piggyback recent membership updates.
+    // Attach recent membership updates for epidemic dissemination.
     auto updates = membership_list_.GetUpdatesForPiggyback(
         config_.max_piggyback_updates);
     for (auto& update : updates) {
         *msg.add_updates() = std::move(update);
     }
 
-    // Also piggyback our own load metadata.
+    // Attach our own load metadata so the gateway can make routing decisions
+    // based on each replica's self-reported load.
     {
         std::lock_guard lock(load_mutex_);
         auto* self_update = msg.add_updates();
@@ -350,7 +414,12 @@ void SwimProtocol::SendMessage(const Address& dest, MessageType type,
 }
 
 // ============================================================================
-// ACK waiting
+// ACK coordination between sender and receiver threads
+//
+// The sender registers a pending ACK (seq_num → false), sends a message,
+// then calls WaitForAck which blocks on a condition_variable.
+// The receiver calls RecordAck when an ACK arrives, setting the flag to
+// true and notifying the condition_variable.
 // ============================================================================
 
 bool SwimProtocol::WaitForAck(uint64_t seq_num, int timeout_ms) {
