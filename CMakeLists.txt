@@ -143,6 +143,7 @@ add_executable(gateway
   src/gateway/main.cpp
   src/gateway/replica_registry.cpp
   src/gateway/load_balancer.cpp
+  src/gateway/circuit_breaker.cpp
 )
 target_include_directories(gateway PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(gateway PRIVATE proto_lib gossip_lib)
