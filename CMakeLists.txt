@@ -141,6 +141,7 @@ target_link_libraries(replica PRIVATE proto_lib gossip_lib)
 
 add_executable(gateway
   src/gateway/main.cpp
+  src/gateway/gateway_server.cpp
   src/gateway/replica_registry.cpp
   src/gateway/load_balancer.cpp
   src/gateway/circuit_breaker.cpp
