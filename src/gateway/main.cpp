@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
     ReplicaRegistry registry;
     LoadBalancer lb(registry);
     CircuitBreakerManager cb_manager;
+    RequestQueue queue(100);  // max 100 queued requests before rejecting
 
     // Gossip: gateway joins the cluster as a non-replica member.
     std::string my_gossip_addr = "127.0.0.1:" + std::to_string(gossip_port);
@@ -98,7 +99,7 @@ int main(int argc, char* argv[]) {
     lb.RebuildRing();
 
     // Start gRPC server.
-    GatewayServer server(grpc_port, registry, lb, cb_manager);
+    GatewayServer server(grpc_port, registry, lb, cb_manager, queue);
     g_server = &server;
 
     std::signal(SIGINT, signal_handler);
