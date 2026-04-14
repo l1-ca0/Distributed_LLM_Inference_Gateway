@@ -7,8 +7,10 @@
 namespace llmgateway {
 
 GatewayServer::GatewayServer(int port, ReplicaRegistry& registry,
-                             LoadBalancer& lb, CircuitBreakerManager& cb_manager)
-    : port_(port), registry_(registry), lb_(lb), cb_manager_(cb_manager) {}
+                             LoadBalancer& lb, CircuitBreakerManager& cb_manager,
+                             RequestQueue& queue)
+    : port_(port), registry_(registry), lb_(lb), cb_manager_(cb_manager),
+      queue_(queue) {}
 
 void GatewayServer::Start() {
     std::string server_address = "0.0.0.0:" + std::to_string(port_);
@@ -71,8 +73,19 @@ grpc::Status GatewayServer::Infer(grpc::ServerContext* context,
 
         auto selection = lb_.SelectReplica(prompt);
         if (!selection) {
-            return grpc::Status(grpc::StatusCode::RESOURCE_EXHAUSTED,
-                                "all replicas at capacity");
+            // No replica has capacity — wait in the backpressure queue.
+            // The calling thread blocks until NotifyCapacityAvailable() is
+            // called (when another request finishes) or the timeout expires.
+            if (!queue_.WaitForCapacity()) {
+                return grpc::Status(grpc::StatusCode::RESOURCE_EXHAUSTED,
+                                    "all replicas at capacity and queue full");
+            }
+            // Retry selection after being woken.
+            selection = lb_.SelectReplica(prompt);
+            if (!selection) {
+                // Still no capacity (e.g., replica died while we were queued).
+                continue;
+            }
         }
 
         // Circuit breaker check: if the replica is in OPEN state, skip it.
@@ -92,6 +105,10 @@ grpc::Status GatewayServer::Infer(grpc::ServerContext* context,
             prompt, max_tokens, tokens_sent, writer, context);
 
         registry_.DecrementActive(selection->replica_id);
+
+        // Notify the backpressure queue that a slot has freed up.
+        // This wakes the next FIFO-waiting request thread (if any).
+        queue_.NotifyCapacityAvailable();
 
         if (streamed < 0) {
             // streamed == -1 signals a replica-side gRPC error. Record the

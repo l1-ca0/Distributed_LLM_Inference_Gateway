@@ -9,6 +9,7 @@
 #include "gateway/circuit_breaker.h"
 #include "gateway/load_balancer.h"
 #include "gateway/replica_registry.h"
+#include "gateway/request_queue.h"
 #include "gossip/swim.h"
 
 namespace llmgateway {
@@ -42,7 +43,7 @@ namespace llmgateway {
 class GatewayServer final : public InferenceGateway::Service {
 public:
     GatewayServer(int port, ReplicaRegistry& registry, LoadBalancer& lb,
-                  CircuitBreakerManager& cb_manager);
+                  CircuitBreakerManager& cb_manager, RequestQueue& queue);
 
     void Start();
     void Stop();
@@ -75,6 +76,7 @@ private:
     ReplicaRegistry& registry_;
     LoadBalancer& lb_;
     CircuitBreakerManager& cb_manager_;
+    RequestQueue& queue_;
     std::unique_ptr<grpc::Server> server_;
 };
 
