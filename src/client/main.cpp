@@ -9,6 +9,7 @@ int main(int argc, char* argv[]) {
     std::string prompt = "Hello, world!";
     int max_tokens = 10;
     bool direct = false;  // if true, call replica directly (bypass gateway)
+    bool hedge = false;    // if true, enable request hedging
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -16,6 +17,7 @@ int main(int argc, char* argv[]) {
         else if (arg == "--prompt" && i + 1 < argc) prompt = argv[++i];
         else if (arg == "--max-tokens" && i + 1 < argc) max_tokens = std::stoi(argv[++i]);
         else if (arg == "--direct") direct = true;
+        else if (arg == "--hedge") hedge = true;
     }
 
     llmgateway::InferenceClient client(target);
@@ -28,7 +30,7 @@ int main(int argc, char* argv[]) {
     if (direct) {
         result = client.GenerateDirect("req-1", prompt, max_tokens);
     } else {
-        result = client.Infer("client-1", prompt, max_tokens);
+        result = client.Infer("client-1", prompt, max_tokens, hedge);
     }
 
     if (result.success) {

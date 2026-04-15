@@ -57,6 +57,12 @@ private:
                        const InferRequest* request,
                        grpc::ServerWriter<InferResponse>* writer) override;
 
+    // Handle a hedged request: send to 2 replicas simultaneously, stream
+    // from whichever produces the first token faster, cancel the slower one.
+    grpc::Status InferHedged(grpc::ServerContext* context,
+                             const InferRequest* request,
+                             grpc::ServerWriter<InferResponse>* writer);
+
     // Forward a Generate request to a specific replica and stream tokens back.
     // Returns:
     //   >= 0 : number of tokens successfully streamed to the client.

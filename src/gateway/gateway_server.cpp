@@ -1,6 +1,8 @@
 #include "gateway/gateway_server.h"
 
 #include <chrono>
+#include <future>
+#include <thread>
 
 #include "common/log.h"
 
@@ -61,6 +63,15 @@ void GatewayServer::Stop() {
 grpc::Status GatewayServer::Infer(grpc::ServerContext* context,
                                   const InferRequest* request,
                                   grpc::ServerWriter<InferResponse>* writer) {
+    // Dispatch to hedged path if requested and there are at least 2 replicas.
+    if (request->hedge()) {
+        auto alive = registry_.GetAliveReplicas();
+        if (alive.size() >= 2) {
+            return InferHedged(context, request, writer);
+        }
+        // Fall through to normal path if not enough replicas for hedging.
+    }
+
     const int max_tokens = request->max_tokens();
     const std::string& prompt = request->prompt();
     int tokens_sent = 0;
@@ -146,6 +157,192 @@ grpc::Status GatewayServer::Infer(grpc::ServerContext* context,
 
     return grpc::Status(grpc::StatusCode::UNAVAILABLE,
                         "all replicas failed after retries");
+}
+
+// ---------------------------------------------------------------------------
+// InferHedged: speculative execution — race two replicas.
+//
+// Strategy (inspired by Google's "The Tail at Scale"):
+//   1. Select two different replicas via the load balancer.
+//   2. Open Generate streams to both simultaneously (in separate threads).
+//   3. Whichever replica produces its first token faster becomes the "winner."
+//   4. Stream all remaining tokens from the winner to the client.
+//   5. Cancel the loser's stream to free its capacity.
+//
+// This reduces tail latency at the cost of extra replica utilization.
+// The winner is determined by first-token latency (time to first Read()),
+// not by which thread starts first. Both threads read one token, then
+// signal via a shared promise. The main thread picks the winner and
+// continues streaming from it.
+// ---------------------------------------------------------------------------
+grpc::Status GatewayServer::InferHedged(grpc::ServerContext* context,
+                                        const InferRequest* request,
+                                        grpc::ServerWriter<InferResponse>* writer) {
+    const int max_tokens = request->max_tokens();
+    const std::string& prompt = request->prompt();
+
+    // Select two different replicas.
+    auto sel1 = lb_.SelectReplica(prompt);
+    if (!sel1) {
+        return grpc::Status(grpc::StatusCode::RESOURCE_EXHAUSTED,
+                            "no replica available for hedging");
+    }
+
+    // For the second replica, we need a different one. Temporarily increment
+    // the first replica's active count so the LB deprioritizes it.
+    registry_.IncrementActive(sel1->replica_id);
+    auto sel2 = lb_.SelectReplica(prompt + "_hedge");  // different hash to get different replica
+    registry_.DecrementActive(sel1->replica_id);
+
+    if (!sel2 || sel2->replica_id == sel1->replica_id) {
+        // Only one replica available — fall through to non-hedged path.
+        // Re-select since we decremented.
+        registry_.IncrementActive(sel1->replica_id);
+        int streamed = StreamFromReplica(sel1->replica_id, sel1->grpc_address,
+                                         prompt, max_tokens, 0, writer, context);
+        registry_.DecrementActive(sel1->replica_id);
+        queue_.NotifyCapacityAvailable();
+        if (streamed >= 0) {
+            cb_manager_.RecordSuccess(sel1->replica_id);
+            return grpc::Status::OK;
+        }
+        cb_manager_.RecordFailure(sel1->replica_id);
+        return grpc::Status(grpc::StatusCode::UNAVAILABLE, "replica failed");
+    }
+
+    LOG_INFO("gateway", "hedging: racing %s vs %s",
+             sel1->replica_id.c_str(), sel2->replica_id.c_str());
+
+    registry_.IncrementActive(sel1->replica_id);
+    registry_.IncrementActive(sel2->replica_id);
+
+    // Shared state for the race: each thread reads one token, then signals.
+    struct RaceResult {
+        std::string replica_id;
+        std::string grpc_address;
+        GenerateResponse first_token;
+        std::unique_ptr<grpc::ClientContext> ctx;
+        std::unique_ptr<grpc::ClientReader<GenerateResponse>> reader;
+        std::unique_ptr<LLMReplica::Stub> stub;
+        bool success = false;
+    };
+
+    auto race1 = std::make_shared<RaceResult>();
+    auto race2 = std::make_shared<RaceResult>();
+    race1->replica_id = sel1->replica_id;
+    race1->grpc_address = sel1->grpc_address;
+    race2->replica_id = sel2->replica_id;
+    race2->grpc_address = sel2->grpc_address;
+
+    // Promise: first thread to read a token sets it.
+    auto winner_promise = std::make_shared<std::promise<int>>();  // 1 or 2
+    auto winner_future = winner_promise->get_future();
+    auto winner_set = std::make_shared<std::atomic<bool>>(false);
+
+    // Lambda to open a stream and read the first token.
+    auto race_fn = [&](std::shared_ptr<RaceResult> result, int id,
+                       std::shared_ptr<std::promise<int>> promise,
+                       std::shared_ptr<std::atomic<bool>> flag) {
+        auto channel = grpc::CreateChannel(result->grpc_address,
+                                           grpc::InsecureChannelCredentials());
+        result->stub = LLMReplica::NewStub(channel);
+        result->ctx = std::make_unique<grpc::ClientContext>();
+
+        GenerateRequest gen_req;
+        gen_req.set_request_id("hedge-" + std::to_string(id));
+        gen_req.set_prompt(prompt);
+        gen_req.set_max_tokens(max_tokens);
+        gen_req.set_tokens_already_generated(0);
+
+        result->reader = result->stub->Generate(result->ctx.get(), gen_req);
+
+        // Read first token.
+        if (result->reader->Read(&result->first_token)) {
+            result->success = true;
+            // Try to be the winner.
+            bool expected = false;
+            if (flag->compare_exchange_strong(expected, true)) {
+                promise->set_value(id);
+            }
+        }
+    };
+
+    // Launch both races.
+    std::thread t1(race_fn, race1, 1, winner_promise, winner_set);
+    std::thread t2(race_fn, race2, 2, winner_promise, winner_set);
+
+    // Wait for the winner (with timeout).
+    auto status_future = winner_future.wait_for(std::chrono::seconds(10));
+
+    int winner_id = 0;
+    if (status_future == std::future_status::ready) {
+        winner_id = winner_future.get();
+    }
+
+    // Wait for both threads to finish their first-token read.
+    t1.join();
+    t2.join();
+
+    auto winner = (winner_id == 1) ? race1 : race2;
+    auto loser = (winner_id == 1) ? race2 : race1;
+
+    if (winner_id == 0 || !winner->success) {
+        // Neither replica produced a token.
+        if (race1->ctx) race1->ctx->TryCancel();
+        if (race2->ctx) race2->ctx->TryCancel();
+        registry_.DecrementActive(sel1->replica_id);
+        registry_.DecrementActive(sel2->replica_id);
+        queue_.NotifyCapacityAvailable();
+        queue_.NotifyCapacityAvailable();
+        return grpc::Status(grpc::StatusCode::UNAVAILABLE,
+                            "both hedged replicas failed");
+    }
+
+    // Cancel the loser's stream.
+    if (loser->ctx) {
+        loser->ctx->TryCancel();
+    }
+    registry_.DecrementActive(loser->replica_id);
+    queue_.NotifyCapacityAvailable();
+    cb_manager_.RecordSuccess(winner->replica_id);
+    if (loser->success) {
+        cb_manager_.RecordSuccess(loser->replica_id);  // loser also produced a token
+    }
+
+    LOG_INFO("gateway", "hedge winner: %s", winner->replica_id.c_str());
+
+    // Stream the winner's first token to the client.
+    InferResponse resp;
+    resp.set_token(winner->first_token.token());
+    resp.set_is_final(winner->first_token.is_final());
+    resp.set_replica_id(winner->replica_id);
+    writer->Write(resp);
+    int tokens_sent = 1;
+
+    // Continue streaming remaining tokens from the winner.
+    GenerateResponse gen_resp;
+    while (winner->reader->Read(&gen_resp)) {
+        if (context->IsCancelled()) {
+            winner->ctx->TryCancel();
+            break;
+        }
+
+        InferResponse infer_resp;
+        infer_resp.set_token(gen_resp.token());
+        infer_resp.set_is_final(gen_resp.is_final());
+        infer_resp.set_replica_id(winner->replica_id);
+
+        if (!writer->Write(infer_resp)) {
+            winner->ctx->TryCancel();
+            break;
+        }
+        tokens_sent++;
+    }
+
+    registry_.DecrementActive(winner->replica_id);
+    queue_.NotifyCapacityAvailable();
+
+    return grpc::Status::OK;
 }
 
 // ---------------------------------------------------------------------------
