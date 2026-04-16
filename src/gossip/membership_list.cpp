@@ -17,9 +17,15 @@ bool MembershipList::ApplyUpdate(const MembershipUpdate& update) {
     auto it = members_.find(id);
 
     MemberState old_state = DEAD;  // treat unknown as dead for callback purposes
+    int32_t old_max_capacity = 0;
+    int32_t old_active_requests = 0;
+    std::string old_model_version;
 
     if (it != members_.end()) {
         old_state = it->second.state;
+        old_max_capacity = it->second.max_capacity;
+        old_active_requests = it->second.active_requests;
+        old_model_version = it->second.model_version;
         auto& existing = it->second;
 
         // ---- Incarnation-based conflict resolution ----
@@ -38,12 +44,30 @@ bool MembershipList::ApplyUpdate(const MembershipUpdate& update) {
             // State ordering: ALIVE(0) < SUSPECT(1) < DEAD(2)
             if (update.state() <= existing.state) {
                 // Same or weaker state — update load info only.
+                bool load_changed = false;
                 if (update.active_requests() != 0 || update.max_capacity() != 0) {
+                    if (existing.active_requests != update.active_requests() ||
+                        existing.max_capacity != update.max_capacity()) {
+                        load_changed = true;
+                    }
                     existing.active_requests = update.active_requests();
                     existing.max_capacity = update.max_capacity();
                 }
-                if (!update.model_version().empty()) {
+                if (!update.model_version().empty() &&
+                    existing.model_version != update.model_version()) {
                     existing.model_version = update.model_version();
+                    load_changed = true;
+                }
+                // Fire callback on meaningful metadata change (same state) so
+                // downstream subscribers (e.g., the gateway's ReplicaRegistry)
+                // can refresh capacity/version info that they cached at the
+                // initial state transition — which often carries zero-valued
+                // placeholder metadata from bootstrap AddMember calls.
+                if (load_changed && callback_) {
+                    auto cb = callback_;
+                    MemberState s = existing.state;
+                    lock.unlock();
+                    cb(id, s, s);
                 }
                 return false;  // No state change.
             }
