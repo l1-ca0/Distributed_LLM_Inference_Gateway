@@ -28,17 +28,19 @@ RequestQueue::RequestQueue(int max_size) : max_size_(max_size) {}
 //   false and the caller should return DEADLINE_EXCEEDED or UNAVAILABLE.
 // ---------------------------------------------------------------------------
 bool RequestQueue::WaitForCapacity(int timeout_ms) {
-    // Check if the queue is full before entering the wait.
-    int current = waiting_count_.load();
-    if (current >= max_size_) {
+    std::unique_lock lock(mutex_);
+
+    // Check-and-admit under the lock so the queue bound is a hard limit.
+    // Doing the check lock-free let two callers both pass it and both
+    // increment past max_size_.
+    if (waiting_count_.load() >= max_size_) {
+        int current = waiting_count_.load();
         LOG_WARN("queue", "queue full (%d/%d), rejecting request",
                  current, max_size_);
         return false;
     }
-
     waiting_count_.fetch_add(1);
 
-    std::unique_lock lock(mutex_);
     uint64_t my_ticket = next_ticket_++;
 
     auto deadline = std::chrono::steady_clock::now() +
