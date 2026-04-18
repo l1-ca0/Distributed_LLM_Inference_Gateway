@@ -61,7 +61,12 @@ int main(int argc, char* argv[]) {
     std::string my_gossip_addr = "127.0.0.1:" + std::to_string(gossip_port);
     SwimProtocol swim(gateway_id, my_gossip_addr, gossip_port);
 
-    // On membership change → update the replica registry and rebuild the hash ring.
+    // On membership change → update the replica registry and rebuild the
+    // hash ring. The callback fires for both state transitions and
+    // load-metadata changes (gossip rounds piggyback load every ~200ms).
+    // Only state transitions warrant a hash-ring rebuild; rebuilding on
+    // every load update would block the gossip thread long enough to
+    // cause spurious ping timeouts.
     swim.SetMembershipCallback([&](const std::string& id, MemberState old_s, MemberState new_s) {
         auto info = swim.membership_list().GetMember(id);
         if (info) {
@@ -75,11 +80,12 @@ int main(int argc, char* argv[]) {
             update.set_max_capacity(info->max_capacity);
             registry.UpdateFromGossip(id, update);
         }
-        lb.RebuildRing();
-
-        const char* state_str = (new_s == ALIVE) ? "ALIVE" :
-                                (new_s == SUSPECT) ? "SUSPECT" : "DEAD";
-        LOG_INFO("gateway", "membership change: %s → %s", id.c_str(), state_str);
+        if (old_s != new_s) {
+            lb.RebuildRing();
+            const char* state_str = (new_s == ALIVE) ? "ALIVE" :
+                                    (new_s == SUSPECT) ? "SUSPECT" : "DEAD";
+            LOG_INFO("gateway", "membership change: %s → %s", id.c_str(), state_str);
+        }
     });
 
     swim.JoinCluster(seed_addresses);
