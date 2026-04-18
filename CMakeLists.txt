@@ -167,3 +167,27 @@ target_link_libraries(test_gossip_unit PRIVATE gossip_lib)
 add_executable(test_swim_integration tests/test_swim_integration.cpp)
 target_include_directories(test_swim_integration PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_swim_integration PRIVATE gossip_lib)
+
+# Test infrastructure library (TestCluster, port allocator, test macros).
+# Reused by all integration tests that need an in-process replica + gateway setup.
+add_library(test_cluster STATIC
+  tests/test_cluster.cpp
+  src/gateway/replica_registry.cpp
+  src/gateway/load_balancer.cpp
+  src/gateway/circuit_breaker.cpp
+  src/gateway/request_queue.cpp
+  src/gateway/rolling_updater.cpp
+  src/gateway/gateway_server.cpp
+  src/replica/replica_server.cpp
+  src/client/client.cpp
+)
+target_include_directories(test_cluster PUBLIC
+  ${CMAKE_SOURCE_DIR}/src
+  ${CMAKE_SOURCE_DIR}
+)
+target_link_libraries(test_cluster PUBLIC proto_lib gossip_lib)
+
+# TestCluster smoke test — verifies the harness itself works.
+add_executable(test_cluster_smoke tests/test_cluster_smoke.cpp)
+target_include_directories(test_cluster_smoke PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_cluster_smoke PRIVATE test_cluster)
