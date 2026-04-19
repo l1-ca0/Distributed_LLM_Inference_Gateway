@@ -17,27 +17,23 @@ bool MembershipList::ApplyUpdate(const MembershipUpdate& update) {
     auto it = members_.find(id);
 
     MemberState old_state = DEAD;  // treat unknown as dead for callback purposes
-    int32_t old_max_capacity = 0;
-    int32_t old_active_requests = 0;
-    std::string old_model_version;
 
     if (it != members_.end()) {
         old_state = it->second.state;
-        old_max_capacity = it->second.max_capacity;
-        old_active_requests = it->second.active_requests;
-        old_model_version = it->second.model_version;
         auto& existing = it->second;
 
         // ---- Incarnation-based conflict resolution ----
-        // Rule 1: Higher incarnation always wins.
+        // Rule 1: Higher incarnation always wins (including higher DEAD).
         // Rule 2: At equal incarnation, stronger state wins (DEAD > SUSPECT > ALIVE).
-        // Rule 3: DEAD overrides everything regardless of incarnation.
+        // Rule 3: A strictly older incarnation is always stale and ignored,
+        //         even if it claims DEAD. This is what lets a refuted node
+        //         stay ALIVE: after self-refute bumps its incarnation, stale
+        //         DEAD updates from piggyback buffers of uninformed peers
+        //         still fail the incarnation check and don't resurrect.
 
-        if (update.state() == DEAD) {
-            // DEAD always wins — a dead declaration is final until rejoin.
-            // (Rejoin happens with a new, higher incarnation.)
-        } else if (update.incarnation() < existing.incarnation) {
-            // Stale update — ignore.
+        if (update.incarnation() < existing.incarnation) {
+            // Stale update — ignore regardless of state. This includes stale
+            // DEAD, which would otherwise re-kill an already-refuted node.
             return false;
         } else if (update.incarnation() == existing.incarnation) {
             // Same incarnation: stronger state wins.
@@ -58,11 +54,11 @@ bool MembershipList::ApplyUpdate(const MembershipUpdate& update) {
                     existing.model_version = update.model_version();
                     load_changed = true;
                 }
-                // Fire callback on meaningful metadata change (same state) so
+                // Fire the callback on a same-state load change so that
                 // downstream subscribers (e.g., the gateway's ReplicaRegistry)
-                // can refresh capacity/version info that they cached at the
-                // initial state transition — which often carries zero-valued
-                // placeholder metadata from bootstrap AddMember calls.
+                // can refresh capacity / model-version info. Without this,
+                // subscribers would cache whatever metadata arrived with
+                // the first state-transition update forever.
                 if (load_changed && callback_) {
                     auto cb = callback_;
                     MemberState s = existing.state;

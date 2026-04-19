@@ -174,10 +174,13 @@ void test_refutation_higher_incarnation() {
     ASSERT(ml.GetMember("node-1")->incarnation == 4, "incarnation should be 4");
 }
 
-// SWIM Rule: DEAD overrides everything regardless of incarnation.
-// Once a node is declared dead (suspect timer expired), only a rejoin
-// with a new incarnation can bring it back.
-void test_dead_overrides_everything() {
+// SWIM Rule: DEAD wins only at equal-or-higher incarnation.
+// A stale DEAD update (lower incarnation) must be ignored, otherwise it
+// would repeatedly resurrect the "dead" state after a node has already
+// refuted via self-incarnation increment. Gossip piggyback buffers can
+// hold updates long after a node has recovered; without this check, one
+// of those buffered stale DEADs could re-kill the refuted node forever.
+void test_dead_incarnation_rules() {
     MembershipList ml("self");
 
     MembershipUpdate u1;
@@ -187,15 +190,37 @@ void test_dead_overrides_everything() {
     u1.set_incarnation(100);
     ml.ApplyUpdate(u1);
 
-    // DEAD with lower incarnation should still override.
-    MembershipUpdate u2;
-    u2.set_member_id("node-1");
-    u2.set_address("127.0.0.1:7001");
-    u2.set_state(DEAD);
-    u2.set_incarnation(1);
-    bool changed = ml.ApplyUpdate(u2);
-    ASSERT(changed, "DEAD should override ALIVE regardless of incarnation");
+    // Stale DEAD (lower incarnation) should be IGNORED.
+    MembershipUpdate stale_dead;
+    stale_dead.set_member_id("node-1");
+    stale_dead.set_address("127.0.0.1:7001");
+    stale_dead.set_state(DEAD);
+    stale_dead.set_incarnation(1);
+    bool changed = ml.ApplyUpdate(stale_dead);
+    ASSERT(!changed, "stale DEAD (lower incarnation) must be ignored");
+    ASSERT(ml.GetMember("node-1")->state == ALIVE,
+           "node should stay ALIVE against stale DEAD");
+
+    // Fresh DEAD (equal incarnation) should win via Rule 2 (stronger state).
+    MembershipUpdate equal_dead;
+    equal_dead.set_member_id("node-1");
+    equal_dead.set_address("127.0.0.1:7001");
+    equal_dead.set_state(DEAD);
+    equal_dead.set_incarnation(100);
+    changed = ml.ApplyUpdate(equal_dead);
+    ASSERT(changed, "DEAD at same incarnation should override ALIVE");
     ASSERT(ml.GetMember("node-1")->state == DEAD, "should be DEAD");
+
+    // Higher-incarnation ALIVE would refute this DEAD.
+    MembershipUpdate refute;
+    refute.set_member_id("node-1");
+    refute.set_address("127.0.0.1:7001");
+    refute.set_state(ALIVE);
+    refute.set_incarnation(101);
+    changed = ml.ApplyUpdate(refute);
+    ASSERT(changed, "higher-incarnation ALIVE refutes DEAD");
+    ASSERT(ml.GetMember("node-1")->state == ALIVE,
+           "node should be ALIVE after higher-incarnation refute");
 }
 
 // Verify the explicit MarkSuspect/MarkDead methods used by the SWIM sender
@@ -347,7 +372,7 @@ int main() {
     TEST(incarnation_lower_ignored);
     TEST(equal_incarnation_stronger_state_wins);
     TEST(refutation_higher_incarnation);
-    TEST(dead_overrides_everything);
+    TEST(dead_incarnation_rules);
     TEST(mark_suspect_and_dead);
     TEST(self_incarnation_increment);
     TEST(piggyback_buffer);
