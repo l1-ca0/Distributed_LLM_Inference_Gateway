@@ -27,7 +27,16 @@ public:
                   int max_capacity = 4);
 
     void Start();
+
+    // Graceful shutdown: waits for in-flight streams to complete. Use when
+    // the replica is being drained deliberately (e.g. rolling update).
     void Stop();
+
+    // Hard shutdown: cancels in-flight streams immediately and tears down
+    // the gRPC server. Equivalent to simulating a process crash — any
+    // client currently streaming from this replica will receive a gRPC
+    // error mid-stream rather than a clean end-of-stream.
+    void Kill();
 
     int active_requests() const { return active_requests_.load(); }
     int max_capacity() const { return max_capacity_; }

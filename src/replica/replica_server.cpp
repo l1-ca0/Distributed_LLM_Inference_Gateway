@@ -36,6 +36,15 @@ void ReplicaServer::Stop() {
     }
 }
 
+void ReplicaServer::Kill() {
+    if (server_) {
+        // Deadline in the past → Shutdown forcibly cancels in-flight RPCs
+        // instead of waiting for them to finish naturally.
+        server_->Shutdown(std::chrono::system_clock::now());
+        LOG_INFO("replica", "%s killed (force)", replica_id_.c_str());
+    }
+}
+
 void ReplicaServer::set_fault_config(const ReplicaFaultConfig& config) {
     error_rate_.store(config.error_rate);
     reject_all_.store(config.reject_all);
