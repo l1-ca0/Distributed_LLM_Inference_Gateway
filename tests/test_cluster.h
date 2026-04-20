@@ -116,6 +116,8 @@ public:
 
     // Internal-state accessors for assertions.
     ReplicaServer* GetReplica(const std::string& id);
+    gossip::SwimProtocol* GetReplicaSwim(const std::string& id);
+    gossip::SwimProtocol* GetGatewaySwim();
     ReplicaRegistry* GetRegistry();
     CircuitBreakerManager* GetCircuitBreakerManager();
     RequestQueue* GetRequestQueue();

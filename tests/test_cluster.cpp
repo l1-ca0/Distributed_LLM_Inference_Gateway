@@ -24,8 +24,6 @@ TestCluster::~TestCluster() {
 }
 
 SwimConfig TestCluster::TestSwimConfig() const {
-    // Aggressive timing so tests run quickly. Production defaults are
-    // 500ms/200ms/2000ms — we use 200ms/100ms/1000ms here.
     SwimConfig c;
     c.protocol_period_ms = 200;
     c.ping_timeout_ms = 100;
@@ -131,12 +129,18 @@ void TestCluster::StartGateway() {
 
     // Wire membership changes into the registry + rebuild ring.
     // Captured objects live as long as TestCluster does, so raw pointers are safe.
+    //
+    // Gate the ring rebuild on state change — the callback fires for every
+    // load-metadata change too (a gossip round every 200ms), and rebuilding
+    // 150 virtual nodes per replica on each of those blocks the gossip
+    // receiver thread enough to cause spurious ping timeouts.
     ReplicaRegistry* registry_ptr = gateway_->registry.get();
     LoadBalancer* lb_ptr = gateway_->lb.get();
     SwimProtocol* swim_ptr = gateway_->swim.get();
     gateway_->swim->SetMembershipCallback(
         [registry_ptr, lb_ptr, swim_ptr](const std::string& member_id,
-                                         MemberState, MemberState) {
+                                         MemberState old_state,
+                                         MemberState new_state) {
             auto info = swim_ptr->membership_list().GetMember(member_id);
             if (info) {
                 MembershipUpdate update;
@@ -149,7 +153,9 @@ void TestCluster::StartGateway() {
                 update.set_max_capacity(info->max_capacity);
                 registry_ptr->UpdateFromGossip(member_id, update);
             }
-            lb_ptr->RebuildRing();
+            if (old_state != new_state) {
+                lb_ptr->RebuildRing();
+            }
         });
 
     // Seed from all currently-running replicas.
@@ -234,6 +240,18 @@ ReplicaServer* TestCluster::GetReplica(const std::string& id) {
     return it->second->server.get();
 }
 
+SwimProtocol* TestCluster::GetReplicaSwim(const std::string& id) {
+    std::lock_guard lock(mutex_);
+    auto it = replicas_.find(id);
+    if (it == replicas_.end() || !it->second->swim) return nullptr;
+    return it->second->swim.get();
+}
+
+SwimProtocol* TestCluster::GetGatewaySwim() {
+    std::lock_guard lock(mutex_);
+    return gateway_ ? gateway_->swim.get() : nullptr;
+}
+
 ReplicaRegistry* TestCluster::GetRegistry() {
     std::lock_guard lock(mutex_);
     return gateway_ ? gateway_->registry.get() : nullptr;
@@ -275,14 +293,18 @@ std::optional<MemberInfo> TestCluster::GetReplicaViewOfMember(
 }
 
 // ---------------------------------------------------------------------------
-// KillReplica: simulates a crash by destroying the replica's objects.
+// KillReplica: simulates a crash by force-shutting the replica's gRPC
+// server and destroying its objects.
 //
-// We do NOT send a graceful leave — that would defeat the point of testing
-// failure detection (Tests 2, 3). The gossip network will detect the dead
-// replica via ping timeouts.
+// We do NOT send a graceful gossip leave — that would defeat the point of
+// testing failure detection, since the gossip network is supposed to notice
+// via ping timeouts. Gossip threads are joined via the SwimProtocol
+// destructor; the gRPC server is force-shutdown via ReplicaServer::Kill()
+// so that any in-flight Generate streams are cancelled immediately rather
+// than allowed to finish gracefully.
 //
-// The replica's ports become free immediately (destructors close the
-// sockets). A subsequent RestartReplica() can reuse the same ports.
+// The replica's ports become free after the destructor runs. A subsequent
+// RestartReplica() can reuse the same ports.
 // ---------------------------------------------------------------------------
 void TestCluster::KillReplica(const std::string& id) {
     std::unique_ptr<ReplicaNode> victim;
@@ -303,6 +325,12 @@ void TestCluster::KillReplica(const std::string& id) {
         it->second->gossip_port = victim->gossip_port;
         it->second->config = victim->config;
     }
+
+    // Force-cancel any in-flight gRPC streams before the destructor runs.
+    // The default grpc::Server destructor triggers a graceful Shutdown,
+    // which would let current Generate calls stream all remaining tokens
+    // before the server stops — incompatible with a crash simulation.
+    if (victim->server) victim->server->Kill();
 
     // Destruct outside the lock.
     victim.reset();
