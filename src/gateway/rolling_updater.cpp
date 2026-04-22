@@ -44,6 +44,13 @@ bool RollingUpdater::Update(const std::vector<std::string>& replica_ids,
                  replica_id.c_str(), new_version.c_str());
         restart_fn(replica_id, new_version);
 
+        // Clear the draining flag and rebuild the ring so the restarted
+        // replica starts receiving traffic as soon as gossip marks it ALIVE.
+        // draining is a gateway-side flag that UpdateFromGossip does not
+        // touch, so we must explicitly reset it here after restart.
+        registry_.SetDraining(replica_id, false);
+        lb_.RebuildRing();
+
         // Step 4: Wait for the restarted replica to rejoin via gossip.
         if (!WaitForRejoin(replica_id, rejoin_timeout_ms)) {
             LOG_WARN("rolling", "%s did not rejoin within timeout, continuing",
