@@ -4,6 +4,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <unordered_set>
 
 #include "gateway/replica_registry.h"
 
@@ -40,11 +41,19 @@ public:
 
     // Select a replica for the given prompt. Returns replica_id and gRPC address.
     // Returns nullopt if no replica has capacity (caller should queue the request).
+    //
+    // `excluded` lets the caller skip specific replicas — typically used by the
+    // gateway's retry loop to avoid re-selecting a replica whose circuit just
+    // tripped or whose stream just failed. Without this, consistent hashing
+    // would keep returning the same replica for the same prompt and the retry
+    // loop would exhaust attempts on a known-bad target.
     struct Selection {
         std::string replica_id;
         std::string grpc_address;
     };
-    std::optional<Selection> SelectReplica(const std::string& prompt);
+    std::optional<Selection> SelectReplica(
+        const std::string& prompt,
+        const std::unordered_set<std::string>& excluded = {});
 
     // Rebuild the consistent hash ring from the current alive replicas.
     // Should be called whenever membership changes (e.g., from a gossip
@@ -54,10 +63,13 @@ public:
 
 private:
     // Tier 1: find replica via consistent hashing.
-    std::optional<Selection> SelectByConsistentHash(const std::string& prompt);
+    std::optional<Selection> SelectByConsistentHash(
+        const std::string& prompt,
+        const std::unordered_set<std::string>& excluded);
 
     // Tier 2: weighted least-connections fallback.
-    std::optional<Selection> SelectByLeastConnections();
+    std::optional<Selection> SelectByLeastConnections(
+        const std::unordered_set<std::string>& excluded);
 
     // Hash function for the consistent hash ring.
     // Uses std::hash<string> -- fast and sufficient for load distribution

@@ -22,14 +22,15 @@ LoadBalancer::LoadBalancer(ReplicaRegistry& registry, int virtual_nodes)
 // falls through to Tier 2 (least-connections) if the ring is empty or
 // every ring position is at capacity.
 std::optional<LoadBalancer::Selection> LoadBalancer::SelectReplica(
-    const std::string& prompt) {
+    const std::string& prompt,
+    const std::unordered_set<std::string>& excluded) {
 
     // Tier 1: try consistent hashing for KV-cache affinity.
-    auto selection = SelectByConsistentHash(prompt);
+    auto selection = SelectByConsistentHash(prompt, excluded);
     if (selection) return selection;
 
     // Tier 2: fall back to weighted least-connections.
-    return SelectByLeastConnections();
+    return SelectByLeastConnections(excluded);
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +87,8 @@ void LoadBalancer::RebuildRing() {
 //    nullopt so the caller falls through to Tier 2.
 // ---------------------------------------------------------------------------
 std::optional<LoadBalancer::Selection> LoadBalancer::SelectByConsistentHash(
-    const std::string& prompt) {
+    const std::string& prompt,
+    const std::unordered_set<std::string>& excluded) {
 
     std::lock_guard lock(ring_mutex_);
     if (ring_.empty()) return std::nullopt;
@@ -106,13 +108,18 @@ std::optional<LoadBalancer::Selection> LoadBalancer::SelectByConsistentHash(
     while (true) {
         const auto& replica_id = it->second;
 
-        auto info = registry_.GetReplica(replica_id);
-        // max_capacity == 0 means "unlimited": the replica has no gateway-enforced
-        // concurrency cap and self-manages its own parallelism.
-        if (info && !info->draining &&
-            info->gossip_state != llmgateway::gossip::DEAD &&
-            (info->max_capacity == 0 || info->active_requests.load() < info->max_capacity)) {
-            return Selection{replica_id, info->grpc_address};
+        // Skip replicas the caller has asked us to exclude (e.g., circuits
+        // open, just-failed stream). The next ring point may be a different
+        // replica; if not, we'll walk past it on the next iteration.
+        if (excluded.count(replica_id) == 0) {
+            auto info = registry_.GetReplica(replica_id);
+            // max_capacity == 0 means "unlimited": the replica has no gateway-enforced
+            // concurrency cap and self-manages its own parallelism.
+            if (info && !info->draining &&
+                info->gossip_state != llmgateway::gossip::DEAD &&
+                (info->max_capacity == 0 || info->active_requests.load() < info->max_capacity)) {
+                return Selection{replica_id, info->grpc_address};
+            }
         }
 
         // Move clockwise.
@@ -149,7 +156,8 @@ std::optional<LoadBalancer::Selection> LoadBalancer::SelectByConsistentHash(
 // Returns nullopt only when every alive replica is at capacity -- the
 // caller (Infer) will then return RESOURCE_EXHAUSTED to the client.
 // ---------------------------------------------------------------------------
-std::optional<LoadBalancer::Selection> LoadBalancer::SelectByLeastConnections() {
+std::optional<LoadBalancer::Selection> LoadBalancer::SelectByLeastConnections(
+    const std::unordered_set<std::string>& excluded) {
     auto alive = registry_.GetAliveReplicas();
     if (alive.empty()) return std::nullopt;
 
@@ -159,6 +167,7 @@ std::optional<LoadBalancer::Selection> LoadBalancer::SelectByLeastConnections() 
     int tie_count = 0;
 
     for (const auto& [id, info] : alive) {
+        if (excluded.count(id)) continue;
         // Skip replicas that are at capacity (max_capacity > 0 means enforced).
         if (info.max_capacity > 0 && info.active_requests.load() >= info.max_capacity) continue;
 

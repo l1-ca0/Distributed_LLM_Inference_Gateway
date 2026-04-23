@@ -3,6 +3,7 @@
 #include <chrono>
 #include <future>
 #include <thread>
+#include <unordered_set>
 
 #include "common/log.h"
 
@@ -39,18 +40,23 @@ void GatewayServer::Stop() {
 // Retry loop design:
 //   The loop runs up to max_retries times. Each iteration:
 //     1. Check if the client cancelled (e.g., timeout, user abort).
-//     2. Ask the LoadBalancer for a replica (consistent hash -> least-conn).
+//     2. Ask the LoadBalancer for a replica, passing an exclude set of
+//        replicas already known to be unusable for this request.
 //     3. Check the circuit breaker. If the selected replica's circuit is
-//        open, skip it and burn one retry iteration (continue). The load
-//        balancer may return the same replica again, but the circuit
-//        breaker prevents hammering it.
-//     4. Increment the active request counter (for load-balancer awareness),
+//        OPEN, add it to the exclude set so the next iteration picks a
+//        different replica.
+//     4. Increment the active-request counter (for load-balancer awareness),
 //        then stream tokens from the replica.
 //     5. On success (streamed >= 0): accumulate tokens_sent, record a
 //        circuit-breaker success. If all tokens are delivered, return OK.
-//     6. On failure (streamed == -1): record a circuit-breaker failure and
-//        retry with a (potentially different) replica. tokens_sent is NOT
-//        incremented, so the next replica picks up from where we left off.
+//     6. On replica failure (streamed == -1): record a circuit-breaker
+//        failure, add the replica to the exclude set, and retry.
+//        tokens_sent is NOT incremented, so the next replica picks up
+//        from where we left off via tokens_already_generated.
+//
+// The exclude set is the key to robust retries: consistent-hashing selection
+// is otherwise deterministic for a given prompt, so without exclusions the
+// retry loop would keep picking the same broken replica every iteration.
 //
 // Partial delivery: if some tokens were sent before all retries exhausted,
 // return OK rather than an error. The client already received partial
@@ -77,12 +83,18 @@ grpc::Status GatewayServer::Infer(grpc::ServerContext* context,
     int tokens_sent = 0;
     int max_retries = 3;
 
+    // Replicas to skip on subsequent retries for this request: circuits
+    // that tripped OPEN or streams that just failed. Consistent-hashing
+    // selection is deterministic for a given prompt, so without this set
+    // the retry loop would keep picking the same broken replica.
+    std::unordered_set<std::string> excluded;
+
     for (int attempt = 0; attempt < max_retries && tokens_sent < max_tokens; attempt++) {
         if (context->IsCancelled()) {
             return grpc::Status::CANCELLED;
         }
 
-        auto selection = lb_.SelectReplica(prompt);
+        auto selection = lb_.SelectReplica(prompt, excluded);
         if (!selection) {
             // No replica has capacity — wait in the backpressure queue.
             // The calling thread blocks until NotifyCapacityAvailable() is
@@ -92,19 +104,19 @@ grpc::Status GatewayServer::Infer(grpc::ServerContext* context,
                                     "all replicas at capacity and queue full");
             }
             // Retry selection after being woken.
-            selection = lb_.SelectReplica(prompt);
+            selection = lb_.SelectReplica(prompt, excluded);
             if (!selection) {
                 // Still no capacity (e.g., replica died while we were queued).
                 continue;
             }
         }
 
-        // Circuit breaker check: if the replica is in OPEN state, skip it.
-        // This consumes a retry attempt, which is intentional -- it gives
-        // the load balancer a chance to pick a different replica next time.
+        // Circuit breaker check: if the replica is in OPEN state, skip it
+        // for the remainder of this request and let the LB pick another.
         if (!cb_manager_.AllowRequest(selection->replica_id)) {
-            LOG_WARN("gateway", "circuit open for %s, trying next",
+            LOG_WARN("gateway", "circuit open for %s, excluding and retrying",
                      selection->replica_id.c_str());
+            excluded.insert(selection->replica_id);
             continue;
         }
 
@@ -124,8 +136,10 @@ grpc::Status GatewayServer::Infer(grpc::ServerContext* context,
         if (streamed < 0) {
             // streamed == -1 signals a replica-side gRPC error. Record the
             // failure so the circuit breaker can track the error rate and
-            // potentially open the circuit for this replica.
+            // potentially open the circuit for this replica. Also exclude it
+            // from this request's retry set so we pick a different replica.
             cb_manager_.RecordFailure(selection->replica_id);
+            excluded.insert(selection->replica_id);
             LOG_WARN("gateway", "replica %s failed after %d tokens, retrying",
                      selection->replica_id.c_str(), tokens_sent);
             continue;
@@ -139,7 +153,8 @@ grpc::Status GatewayServer::Infer(grpc::ServerContext* context,
         }
 
         // Partial stream (streamed > 0 but < remaining): the replica ended
-        // early. Continue the retry loop to pick up from tokens_sent.
+        // early. Don't retry the same replica — move on.
+        excluded.insert(selection->replica_id);
     }
 
     if (tokens_sent >= max_tokens) {
@@ -267,9 +282,20 @@ grpc::Status GatewayServer::InferHedged(grpc::ServerContext* context,
         }
     };
 
-    // Launch both races.
+    // Launch both races. The threads capture stack references (prompt,
+    // max_tokens) so they MUST be joined before InferHedged returns, even
+    // on an exception path — otherwise the threads would read freed stack.
+    // This small RAII guard makes the join exception-safe; an explicit
+    // join() below is still the normal path.
+    struct ThreadJoiner {
+        std::thread& t;
+        ~ThreadJoiner() { if (t.joinable()) t.join(); }
+    };
+
     std::thread t1(race_fn, race1, 1, winner_promise, winner_set);
+    ThreadJoiner j1{t1};
     std::thread t2(race_fn, race2, 2, winner_promise, winner_set);
+    ThreadJoiner j2{t2};
 
     // Wait for the winner (with timeout).
     auto status_future = winner_future.wait_for(std::chrono::seconds(10));
