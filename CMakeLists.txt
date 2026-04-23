@@ -191,3 +191,19 @@ target_link_libraries(test_cluster PUBLIC proto_lib gossip_lib)
 add_executable(test_cluster_smoke tests/test_cluster_smoke.cpp)
 target_include_directories(test_cluster_smoke PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR})
 target_link_libraries(test_cluster_smoke PRIVATE test_cluster)
+
+# test suite
+add_executable(test_driver
+  tests/test_driver.cpp
+  tests/test1_load_balancing.cpp
+  tests/test2_gossip_failure.cpp
+  tests/test3_gossip_convergence.cpp
+  tests/test4_midstream_failover.cpp
+  tests/test5_backpressure.cpp
+  tests/test6_suspicion_refutation.cpp
+  tests/test7_rolling_update.cpp
+  tests/test8_circuit_breaker.cpp
+  tests/test9_request_hedging.cpp
+)
+target_include_directories(test_driver PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_driver PRIVATE test_cluster)
