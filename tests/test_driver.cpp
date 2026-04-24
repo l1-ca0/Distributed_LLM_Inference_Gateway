@@ -63,6 +63,7 @@ int main() {
 
     print_summary(results);
 
-    // Exit 0 regardless — the autograder parses the printed TOTAL.
+    // The printed TOTAL line is the grading signal; the process exit
+    // code is not used.
     return 0;
 }

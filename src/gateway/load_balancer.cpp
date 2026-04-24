@@ -25,7 +25,7 @@ std::optional<LoadBalancer::Selection> LoadBalancer::SelectReplica(
     const std::string& prompt,
     const std::unordered_set<std::string>& excluded) {
 
-    // Tier 1: try consistent hashing for KV-cache affinity.
+    // Tier 1: try consistent hashing for prompt-prefix affinity.
     auto selection = SelectByConsistentHash(prompt, excluded);
     if (selection) return selection;
 
@@ -70,8 +70,8 @@ void LoadBalancer::RebuildRing() {
 //
 // 1. Hash the prompt prefix (first 64 chars). Using only the prefix means
 //    requests that share a common prefix (e.g., system prompt + few-shot
-//    examples) will hash to the same ring position, maximizing KV-cache
-//    reuse on the target replica.
+//    examples) will hash to the same ring position, giving stable prefix
+//    affinity.
 //
 // 2. lower_bound(h) finds the first ring point >= h (clockwise from h).
 //    If we overshoot the end, wrap to ring_.begin() (the ring is circular).

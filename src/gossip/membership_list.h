@@ -1,5 +1,10 @@
 #pragma once
 
+// Thread-safe membership table used by the SWIM protocol.
+// Stores per-member state and incarnation, resolves conflicting updates,
+// and maintains a piggyback buffer of recent changes to disseminate on
+// outgoing gossip messages.
+
 #include <chrono>
 #include <deque>
 #include <functional>

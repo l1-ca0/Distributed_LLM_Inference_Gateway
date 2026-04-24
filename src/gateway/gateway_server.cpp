@@ -282,11 +282,10 @@ grpc::Status GatewayServer::InferHedged(grpc::ServerContext* context,
         }
     };
 
-    // Launch both races. The threads capture stack references (prompt,
-    // max_tokens) so they MUST be joined before InferHedged returns, even
-    // on an exception path — otherwise the threads would read freed stack.
-    // This small RAII guard makes the join exception-safe; an explicit
-    // join() below is still the normal path.
+    // The race threads capture `prompt` and `max_tokens` by reference
+    // from this stack frame, so both must be joined before InferHedged
+    // returns. The RAII guards enforce this on every exit path including
+    // exceptions; the explicit join() calls below handle the normal path.
     struct ThreadJoiner {
         std::thread& t;
         ~ThreadJoiner() { if (t.joinable()) t.join(); }

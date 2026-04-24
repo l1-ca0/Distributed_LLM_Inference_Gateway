@@ -1,5 +1,9 @@
 #pragma once
 
+// Simulated LLM inference replica. Serves the LLMReplica gRPC service,
+// streams fake tokens at a configurable rate, and supports runtime
+// fault injection for failover and circuit-breaker tests.
+
 #include <atomic>
 #include <memory>
 #include <string>
@@ -21,6 +25,33 @@ struct ReplicaFaultConfig {
     bool reject_all = false;
 };
 
+// ---------------------------------------------------------------------------
+// ReplicaServer: simulated LLM inference replica backing the gateway.
+//
+// Implements the LLMReplica gRPC service, whose main RPC is a
+// server-streaming Generate: given a prompt and max_tokens, produce one
+// GenerateResponse every token_delay_ms milliseconds until max_tokens
+// tokens have been streamed. No real model is run; the purpose of this
+// class is to exercise the distributed-systems machinery around it
+// (routing, failover, backpressure, gossip), not ML.
+//
+// Threading model:
+//   - A gRPC server thread pool handles each Generate call on a separate
+//     thread; active_requests_ is incremented on entry and decremented on
+//     exit. max_capacity_ bounds the number of concurrent streams the
+//     replica advertises to the gateway; requests beyond that cap are
+//     rejected with RESOURCE_EXHAUSTED so the gateway can reroute.
+//   - Fault-injection state (error_rate_, reject_all_) is stored in
+//     atomics so tests can flip failure modes at runtime without
+//     restarting the replica.
+//
+// Shutdown:
+//   Stop() is a graceful drain — it signals the server and waits for
+//   in-flight streams to finish. Kill() is a hard shutdown that
+//   force-cancels in-flight streams, modeling a process crash. These
+//   distinct modes are what make mid-stream failover and rolling-update
+//   tests exercise realistically different paths.
+// ---------------------------------------------------------------------------
 class ReplicaServer final : public LLMReplica::Service {
 public:
     ReplicaServer(const std::string& replica_id, int port, int token_delay_ms,

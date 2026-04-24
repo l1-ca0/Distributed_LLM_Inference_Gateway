@@ -1,5 +1,9 @@
 #pragma once
 
+// Blocking gRPC client for the inference service. Primary entry point
+// for tests and the standalone client binary. Supports direct-replica
+// mode, hedging, per-token callbacks, and concurrent batches.
+
 #include <functional>
 #include <future>
 #include <string>
@@ -10,21 +14,43 @@
 
 namespace llmgateway {
 
+// Result of a single inference call. The tokens and replica_ids vectors
+// are index-aligned: replica_ids[i] identifies the replica that produced
+// tokens[i]. Under mid-stream failover or hedging, different indices may
+// reference different replicas — tests rely on this to verify routing
+// behavior. When success is false, error_message explains why; the tokens
+// vector may still contain a partial prefix streamed before the failure.
 struct InferResult {
     std::vector<std::string> tokens;
-    std::vector<std::string> replica_ids;  // which replica(s) served this request
+    std::vector<std::string> replica_ids;
     bool success = false;
     std::string error_message;
     int request_index = -1;  // for tracking order in concurrent batches
 };
 
-// Callback invoked for each token as it arrives during streaming.
-// Parameters: token string, replica_id, token index (0-based).
-// Return false to cancel the stream.
+// Invoked synchronously on the caller's thread for each token received
+// during streaming. Returning false cancels the gRPC stream (via
+// ClientContext::TryCancel), causing the current Infer call to return
+// with success=false. Primarily used by tests to inject mid-stream
+// cancellation behavior.
 using TokenCallback = std::function<bool(const std::string& token,
                                          const std::string& replica_id,
                                          int token_index)>;
 
+// ---------------------------------------------------------------------------
+// InferenceClient: blocking gRPC client for the LLM inference service.
+//
+// Typical usage is against the gateway (which load-balances across
+// replicas), but the client also exposes GenerateDirect() for bypass mode
+// that talks to a replica directly — used by tests to verify per-replica
+// behavior without the gateway in the loop.
+//
+// All Infer* methods block the caller's thread until the stream completes,
+// fails, or is cancelled. Each InferenceClient owns a gRPC channel to its
+// target_address; channels are thread-safe and may be reused across
+// sequential calls, but concurrent calls on the same InferenceClient are
+// not supported (use InferConcurrent for parallelism instead).
+// ---------------------------------------------------------------------------
 class InferenceClient {
 public:
     explicit InferenceClient(const std::string& target_address);

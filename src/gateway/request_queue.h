@@ -1,5 +1,9 @@
 #pragma once
 
+// Bounded FIFO backpressure queue. When every replica is at capacity,
+// incoming Infer calls block on this queue until a request finishes
+// and capacity is notified, rather than failing immediately.
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>

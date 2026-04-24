@@ -8,9 +8,9 @@
 //   - ASSERT(cond, msg): check a condition, throw with file:line on failure
 //   - wait_for(pred, timeout): poll a predicate with timeout (for async tests)
 //
-// Test output goes to stdout (pass/fail + points, consumed by the autograder).
-// Component logs (LOG_INFO etc.) go to stderr and are suppressed via
-// Log::SetQuiet(true) at test startup to keep the output clean.
+// Test output (pass/fail + points) goes to stdout. Component logs
+// (LOG_INFO etc.) go to stderr and are suppressed via Log::SetQuiet(true)
+// at test startup to keep the output clean for graders.
 // ---------------------------------------------------------------------------
 
 #include <chrono>

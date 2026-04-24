@@ -1,5 +1,9 @@
 #pragma once
 
+// Client-facing gRPC service: the gateway's inference entry point.
+// Accepts InferRequest, routes to a replica via the LoadBalancer, and
+// streams tokens back with mid-stream failover and optional hedging.
+
 #include <memory>
 #include <string>
 

@@ -1,5 +1,9 @@
 #pragma once
 
+// Orchestrates rolling replica updates: drain, stop, restart, wait for
+// rejoin — one replica at a time, so the cluster keeps serving traffic
+// on the remaining N-1 replicas throughout the upgrade.
+
 #include <functional>
 #include <string>
 #include <vector>

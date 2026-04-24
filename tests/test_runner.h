@@ -7,10 +7,9 @@
 // them in sequence, aggregates results, and prints a summary.
 //
 // Design:
-//   - Single driver binary so the autograder
-//     invokes one command. Tests are independent because each constructs a
-//     fresh TestCluster and the port allocator hands out unique ports
-//     process-wide.
+//   - Single driver binary so `make test` invokes one command. Tests are
+//     independent because each constructs a fresh TestCluster and the
+//     port allocator hands out unique ports process-wide.
 //   - Tests signal failure by throwing; the runner catches and records the
 //     exception message in TestResult::error. ASSERT() from test_common.h
 //     throws std::runtime_error with file:line info.

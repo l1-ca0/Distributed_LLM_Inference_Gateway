@@ -1,5 +1,9 @@
 #pragma once
 
+// Application-level health guard for replicas. Complements SWIM gossip
+// (which catches crashes) by catching "gray" failures where a replica
+// is alive on the network but failing inference requests.
+
 #include <chrono>
 #include <deque>
 #include <mutex>

@@ -1,5 +1,9 @@
 #pragma once
 
+// In-memory registry of known replicas inside the gateway process.
+// Populated from SWIM gossip callbacks and queried by the load balancer
+// on every routing decision.
+
 #include <atomic>
 #include <optional>
 #include <shared_mutex>

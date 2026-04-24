@@ -30,9 +30,8 @@ RequestQueue::RequestQueue(int max_size) : max_size_(max_size) {}
 bool RequestQueue::WaitForCapacity(int timeout_ms) {
     std::unique_lock lock(mutex_);
 
-    // Check-and-admit under the lock so the queue bound is a hard limit.
-    // Doing the check lock-free let two callers both pass it and both
-    // increment past max_size_.
+    // Check-and-admit happen under the lock so waiting_count_ cannot
+    // exceed max_size_ under concurrent admission.
     if (waiting_count_.load() >= max_size_) {
         int current = waiting_count_.load();
         LOG_WARN("queue", "queue full (%d/%d), rejecting request",
