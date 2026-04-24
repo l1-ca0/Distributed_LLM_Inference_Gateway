@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['latency_20rather_20than_20true_20degradation_0',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
+  ['lb_5f_1',['lb_',['../classllmgateway_1_1GatewayServer.html#a4dd227f95be60be47d306dd20805fef3',1,'llmgateway::GatewayServer::lb_'],['../classllmgateway_1_1RollingUpdater.html#a0d0b94b74b0cb22b9d099ebf68ca08a3',1,'llmgateway::RollingUpdater::lb_']]],
+  ['leavecluster_2',['LeaveCluster',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a18eeb122d6e503871087036da3abb418',1,'llmgateway::gossip::SwimProtocol']]],
+  ['level_20health_3',['errors (application-level health, complementing gossip-level health).',['../classllmgateway_1_1GatewayServer.html#autotoc_md10',1,'']]],
+  ['level_20health_20complementing_20gossip_20level_20health_4',['errors (application-level health, complementing gossip-level health).',['../classllmgateway_1_1GatewayServer.html#autotoc_md10',1,'']]],
+  ['level_5f_5',['level_',['../classllmgateway_1_1Log.html#ab7b72198867cd6c20c92bb6a2c920435',1,'llmgateway::Log']]],
+  ['list_20and_20promotes_20timed_20out_20suspects_20to_20dead_6',['4. Scans suspect list and promotes timed-out suspects to DEAD',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md25',1,'']]],
+  ['llm_20inference_20gateway_7',['Distributed LLM Inference Gateway',['../index.html',1,'']]],
+  ['llmgateway_8',['llmgateway',['../namespacellmgateway.html',1,'']]],
+  ['llmgateway_3a_3agossip_9',['gossip',['../namespacellmgateway_1_1gossip.html',1,'llmgateway']]],
+  ['load_20information_20without_20dedicated_20gossip_20rounds_10',['spreading membership and load information without dedicated gossip rounds.',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md27',1,'']]],
+  ['load_5fbalancer_2ecpp_11',['load_balancer.cpp',['../load__balancer_8cpp.html',1,'']]],
+  ['load_5fbalancer_2eh_12',['load_balancer.h',['../load__balancer_8h.html',1,'']]],
+  ['load_5fmutex_5f_13',['load_mutex_',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a34c7cd5951577823b5f8d3932e4f47d2',1,'llmgateway::gossip::SwimProtocol']]],
+  ['loadbalancer_14',['LoadBalancer',['../classllmgateway_1_1LoadBalancer.html',1,'llmgateway::LoadBalancer'],['../classllmgateway_1_1LoadBalancer.html#a5077ac03d3d53b23bb73e27db5c8134b',1,'llmgateway::LoadBalancer::LoadBalancer()']]],
+  ['locally_15',['any retry). This signals the client to back off or queue locally.',['../classllmgateway_1_1GatewayServer.html#autotoc_md7',1,'']]],
+  ['lock_20during_20routing_20decisions_16',['snapshot without holding the lock during routing decisions.',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md16',1,'']]],
+  ['log_17',['Log',['../classllmgateway_1_1Log.html',1,'llmgateway']]],
+  ['log_2eh_18',['log.h',['../log_8h.html',1,'']]],
+  ['log_5fdebug_19',['LOG_DEBUG',['../log_8h.html#ad5cd256bc61056d74b7ef3fe4d110da9',1,'log.h']]],
+  ['log_5ferror_20',['LOG_ERROR',['../log_8h.html#a89d77b605bc21d6b833c5ae1dde1d69b',1,'log.h']]],
+  ['log_5finfo_21',['LOG_INFO',['../log_8h.html#acb6866ca2c49f4c292a9003cac8d6656',1,'log.h']]],
+  ['log_5fwarn_22',['LOG_WARN',['../log_8h.html#aafba414b71b1ffab0e99732eca7218ed',1,'log.h']]],
+  ['loglevel_23',['LogLevel',['../namespacellmgateway.html#a6d1e634807200cc6dd9e4b9ee467420b',1,'llmgateway']]],
+  ['lookup_24',['not on every request, so SelectReplica is a fast lookup.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md14',1,'']]]
+];

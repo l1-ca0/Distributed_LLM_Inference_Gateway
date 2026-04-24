@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['rather_20than_20true_20degradation_0',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
+  ['realistically_20different_20paths_1',['tests exercise realistically different paths.',['../classllmgateway_1_1ReplicaServer.html#autotoc_md31',1,'']]],
+  ['receive_20timeout_20to_20allow_20clean_20shutdown_2',['Runs continuously with a 100ms receive timeout to allow clean shutdown.',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md26',1,'']]],
+  ['recordfailure_200_20does_20not_3',['-1 triggers RecordFailure; 0 does not.',['../classllmgateway_1_1GatewayServer.html#autotoc_md9',1,'']]],
+  ['recovered_4',['one request to test whether the replica has recovered.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md1',1,'']]],
+  ['recovers_20will_20naturally_20close_20its_20circuit_5',['that recovers will naturally close its circuit.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md5',1,'']]],
+  ['relation_20to_20production_20systems_6',['Relation to Production Systems',['../index.html#autotoc_md35',1,'']]],
+  ['replica_20case_7',['exactly the &quot;first time we hear about this replica&quot; case.',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md15',1,'']]],
+  ['replica_20has_20recovered_8',['one request to test whether the replica has recovered.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md1',1,'']]],
+  ['replica_20is_20alive_20or_20the_20timeout_20expires_9',['We poll every 200ms until the replica is ALIVE or the timeout expires.',['../classllmgateway_1_1RollingUpdater.html#autotoc_md23',1,'']]],
+  ['replica_20is_20dead_10',['the replica is dead.',['../classllmgateway_1_1RollingUpdater.html#autotoc_md22',1,'']]],
+  ['replica_20self_20manages_20its_20concurrency_11',['A value of 0 means &quot;unlimited&quot; (the replica self-manages its concurrency).',['../structllmgateway_1_1ReplicaInfo.html#autotoc_md17',1,'']]],
+  ['replicas_20does_20not_20contend_12',['replicas does not contend.',['../classllmgateway_1_1CircuitBreakerManager.html#autotoc_md6',1,'']]],
+  ['request_20so_20selectreplica_20is_20a_20fast_20lookup_13',['not on every request, so SelectReplica is a fast lookup.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md14',1,'']]],
+  ['request_20to_20test_20whether_20the_20replica_20has_20recovered_14',['one request to test whether the replica has recovered.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md1',1,'']]],
+  ['requests_20might_20fail_20due_20to_20cold_20start_20latency_20rather_20than_20true_20degradation_15',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
+  ['resource_5fexhausted_20to_20the_20client_16',['caller (Infer) will then return RESOURCE_EXHAUSTED to the client.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md13',1,'']]],
+  ['retry_20this_20signals_20the_20client_20to_20back_20off_20or_20queue_20locally_17',['any retry). This signals the client to back off or queue locally.',['../classllmgateway_1_1GatewayServer.html#autotoc_md7',1,'']]],
+  ['return_20deadline_5fexceeded_20or_20unavailable_18',['false and the caller should return DEADLINE_EXCEEDED or UNAVAILABLE.',['../classllmgateway_1_1RequestQueue.html#autotoc_md19',1,'']]],
+  ['return_20resource_5fexhausted_20to_20the_20client_19',['caller (Infer) will then return RESOURCE_EXHAUSTED to the client.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md13',1,'']]],
+  ['rounds_20',['spreading membership and load information without dedicated gossip rounds.',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md27',1,'']]],
+  ['routing_20decisions_21',['snapshot without holding the lock during routing decisions.',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md16',1,'']]],
+  ['runs_20continuously_20with_20a_20100ms_20receive_20timeout_20to_20allow_20clean_20shutdown_22',['Runs continuously with a 100ms receive timeout to allow clean shutdown.',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md26',1,'']]]
+];

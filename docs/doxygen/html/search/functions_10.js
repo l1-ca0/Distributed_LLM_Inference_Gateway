@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['selectbyconsistenthash_0',['SelectByConsistentHash',['../classllmgateway_1_1LoadBalancer.html#acf3ece49bb826f78d7b44093e8d39b39',1,'llmgateway::LoadBalancer']]],
+  ['selectbyleastconnections_1',['SelectByLeastConnections',['../classllmgateway_1_1LoadBalancer.html#a0c026170d75dc488a6fe7de7161045ba',1,'llmgateway::LoadBalancer']]],
+  ['selectreplica_2',['SelectReplica',['../classllmgateway_1_1LoadBalancer.html#a17db88f8b9bb9692bb5b67632364429b',1,'llmgateway::LoadBalancer']]],
+  ['send_3',['Send',['../classllmgateway_1_1gossip_1_1UdpTransport.html#aa1918e7020328002505f8aed6e3bc5ac',1,'llmgateway::gossip::UdpTransport']]],
+  ['senderloop_4',['SenderLoop',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a046d5d514da9a10ec0bcb08e6c64f063',1,'llmgateway::gossip::SwimProtocol']]],
+  ['sendmessage_5',['SendMessage',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#aeed76df397af1a70892966931d91ac6d',1,'llmgateway::gossip::SwimProtocol']]],
+  ['set_5ferror_5frate_6',['set_error_rate',['../classllmgateway_1_1ReplicaServer.html#af974bd4e236f8d42ba1c92c7b6e2329d',1,'llmgateway::ReplicaServer']]],
+  ['set_5ffault_5fconfig_7',['set_fault_config',['../classllmgateway_1_1ReplicaServer.html#a59c51d6c39ccc3f50cc6f8797f286b5b',1,'llmgateway::ReplicaServer']]],
+  ['set_5fmodel_5fversion_8',['set_model_version',['../classllmgateway_1_1ReplicaServer.html#a76d63125cd131f1d3be7c81310d3a5b3',1,'llmgateway::ReplicaServer']]],
+  ['set_5freject_5fall_9',['set_reject_all',['../classllmgateway_1_1ReplicaServer.html#a20b181801edcdef8371027d67847633d',1,'llmgateway::ReplicaServer']]],
+  ['setcallback_10',['SetCallback',['../classllmgateway_1_1gossip_1_1MembershipList.html#a26e482e0a4f01e46f1ea24dbca623eca',1,'llmgateway::gossip::MembershipList']]],
+  ['setdraining_11',['SetDraining',['../classllmgateway_1_1ReplicaRegistry.html#a91284184ac92016fbef442c3ec4d093b',1,'llmgateway::ReplicaRegistry']]],
+  ['setgrpcaddress_12',['SetGrpcAddress',['../classllmgateway_1_1ReplicaRegistry.html#a38ada46f563d8ba418ce302fcb5cf6be',1,'llmgateway::ReplicaRegistry']]],
+  ['setlevel_13',['SetLevel',['../classllmgateway_1_1Log.html#a4812bbc4355eaf1a219ca90ed9f81c43',1,'llmgateway::Log']]],
+  ['setmembershipcallback_14',['SetMembershipCallback',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a70e92a88210eb4bd5c11a7a3c943ede5',1,'llmgateway::gossip::SwimProtocol']]],
+  ['setmyload_15',['SetMyLoad',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a8077f904d34515b60a5275ce5fb74a53',1,'llmgateway::gossip::SwimProtocol']]],
+  ['setquiet_16',['SetQuiet',['../classllmgateway_1_1Log.html#a60d3c354849307ea0e892ca3769aec50',1,'llmgateway::Log']]],
+  ['shouldinjecterror_17',['ShouldInjectError',['../classllmgateway_1_1ReplicaServer.html#a48f06213cd5bf783d0b738ec1f9cdc09',1,'llmgateway::ReplicaServer']]],
+  ['signal_5fhandler_18',['signal_handler',['../gateway_2main_8cpp.html#a3b527c56ed133ee6815bfbc625e757af',1,'signal_handler(int signal):&#160;main.cpp'],['../replica_2main_8cpp.html#a3b527c56ed133ee6815bfbc625e757af',1,'signal_handler(int signal):&#160;main.cpp']]],
+  ['size_19',['Size',['../classllmgateway_1_1ReplicaRegistry.html#a57c37b67be2df387b781c223224190a2',1,'llmgateway::ReplicaRegistry::Size()'],['../classllmgateway_1_1gossip_1_1MembershipList.html#ae773d18b5f0e25e9fa12ca62bd7e87c3',1,'llmgateway::gossip::MembershipList::Size()']]],
+  ['start_20',['Start',['../classllmgateway_1_1GatewayServer.html#a285753fcc7232130e83a81f24a3acdb1',1,'llmgateway::GatewayServer::Start()'],['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a0a766056e7e300c5be5934c043986914',1,'llmgateway::gossip::SwimProtocol::Start()'],['../classllmgateway_1_1ReplicaServer.html#a53316d8361094016e6af4ba19d7657f1',1,'llmgateway::ReplicaServer::Start()']]],
+  ['state_21',['state',['../classllmgateway_1_1CircuitBreaker.html#a6172d4b3da53a6b7b1ba4a1d3d1aa8da',1,'llmgateway::CircuitBreaker']]],
+  ['stop_22',['Stop',['../classllmgateway_1_1GatewayServer.html#ac754f965d2e41e2e1c1c5ef09160681a',1,'llmgateway::GatewayServer::Stop()'],['../classllmgateway_1_1gossip_1_1SwimProtocol.html#af6da5266c7cb2c870fcde0c74f48b47b',1,'llmgateway::gossip::SwimProtocol::Stop()'],['../classllmgateway_1_1ReplicaServer.html#a2168e4742abe23037cf7297434a715e3',1,'llmgateway::ReplicaServer::Stop()']]],
+  ['streamfromreplica_23',['StreamFromReplica',['../classllmgateway_1_1GatewayServer.html#a6b8a1d7f7bc461ca9c5e1555b46b7496',1,'llmgateway::GatewayServer']]],
+  ['swimprotocol_24',['SwimProtocol',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a49ac240738becbe6ff3435607a6dc2e5',1,'llmgateway::gossip::SwimProtocol::SwimProtocol(const std::string &amp;my_id, const std::string &amp;my_address, uint16_t udp_port, SwimConfig config={})'],['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a377a03705ab5d0f298d1fcfd5e1b9975',1,'llmgateway::gossip::SwimProtocol::SwimProtocol(const SwimProtocol &amp;)=delete']]]
+];

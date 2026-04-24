@@ -1,0 +1,28 @@
+var classllmgateway_1_1ReplicaServer =
+[
+    [ "ReplicaServer", "classllmgateway_1_1ReplicaServer.html#a93fab0fd8c431de3e2798f3b891918bc", null ],
+    [ "Start", "classllmgateway_1_1ReplicaServer.html#a53316d8361094016e6af4ba19d7657f1", null ],
+    [ "Stop", "classllmgateway_1_1ReplicaServer.html#a2168e4742abe23037cf7297434a715e3", null ],
+    [ "Kill", "classllmgateway_1_1ReplicaServer.html#a469e6d77d182eeec9cfdc4787837d0e7", null ],
+    [ "active_requests", "classllmgateway_1_1ReplicaServer.html#a91166873ee7b98fda8c1e604f6a4eb6f", null ],
+    [ "max_capacity", "classllmgateway_1_1ReplicaServer.html#af160c9675162315569f2d3344e0ca649", null ],
+    [ "replica_id", "classllmgateway_1_1ReplicaServer.html#ae6fe97d6ddea8d6a2790dd5c3b0a02ee", null ],
+    [ "model_version", "classllmgateway_1_1ReplicaServer.html#ad6845f35e820931a57e9801dd37d09ca", null ],
+    [ "set_model_version", "classllmgateway_1_1ReplicaServer.html#a76d63125cd131f1d3be7c81310d3a5b3", null ],
+    [ "set_fault_config", "classllmgateway_1_1ReplicaServer.html#a59c51d6c39ccc3f50cc6f8797f286b5b", null ],
+    [ "set_error_rate", "classllmgateway_1_1ReplicaServer.html#af974bd4e236f8d42ba1c92c7b6e2329d", null ],
+    [ "set_reject_all", "classllmgateway_1_1ReplicaServer.html#a20b181801edcdef8371027d67847633d", null ],
+    [ "Generate", "classllmgateway_1_1ReplicaServer.html#a7438b526c549bd5a1acce4682b55ecc8", null ],
+    [ "Drain", "classllmgateway_1_1ReplicaServer.html#a6f9ea799304bafaab26b834b124cd1da", null ],
+    [ "ShouldInjectError", "classllmgateway_1_1ReplicaServer.html#a48f06213cd5bf783d0b738ec1f9cdc09", null ],
+    [ "replica_id_", "classllmgateway_1_1ReplicaServer.html#a6d7a8158971d665795112e61bcc45793", null ],
+    [ "model_version_", "classllmgateway_1_1ReplicaServer.html#a6df962cb91ad629460c9f3d695176a63", null ],
+    [ "port_", "classllmgateway_1_1ReplicaServer.html#a32b370dc5bbfc66b13c268d145d34f7e", null ],
+    [ "token_delay_ms_", "classllmgateway_1_1ReplicaServer.html#a865496d29458d94ea289b914320117ad", null ],
+    [ "max_capacity_", "classllmgateway_1_1ReplicaServer.html#a822b504fb6735bb75d34cbb77bcc3be8", null ],
+    [ "active_requests_", "classllmgateway_1_1ReplicaServer.html#ac54a5f7d76c772878726bee645f7e74e", null ],
+    [ "draining_", "classllmgateway_1_1ReplicaServer.html#ac028b035cf5a4a24186d5b02c8a3123e", null ],
+    [ "server_", "classllmgateway_1_1ReplicaServer.html#a5dd9401acb4af841256c1920e9d433d7", null ],
+    [ "error_rate_", "classllmgateway_1_1ReplicaServer.html#ad6060a5a1d01f48ffc46f08e71464613", null ],
+    [ "reject_all_", "classllmgateway_1_1ReplicaServer.html#a9f8d8f19c7a45de5ac1362d3db82f220", null ]
+];

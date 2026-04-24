@@ -1,0 +1,74 @@
+# Doxygen configuration for the Distributed LLM Inference Gateway.
+# Run `make docs` from the repo root to regenerate HTML output into
+# docs/doxygen/html/. Open docs/doxygen/html/index.html to browse.
+
+# ---- Project identity -----------------------------------------------------
+PROJECT_NAME           = "Distributed LLM Inference Gateway"
+PROJECT_BRIEF          = "C++17 gateway with SWIM gossip, consistent-hash load balancing, mid-stream failover, request hedging, circuit breaker, backpressure, and rolling updates."
+PROJECT_NUMBER         =
+OUTPUT_DIRECTORY       = doxygen
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = English
+
+# ---- Input ---------------------------------------------------------------
+INPUT                  = ../src ../README.md
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h *.cpp *.md
+EXCLUDE_PATTERNS       = */build/* */proto_gen/* *.pb.h *.pb.cc
+USE_MDFILE_AS_MAINPAGE = ../README.md
+INCLUDE_PATH           = ../src
+
+# ---- Input preprocessing -------------------------------------------------
+# Convert regular `//` line comments to `///` so Doxygen treats them as
+# documentation. The project's existing comment style is plain `//`; this
+# filter avoids touching source files while still surfacing class, method,
+# and field comments in the rendered output.
+INPUT_FILTER           = "sh doxygen_filter.sh"
+
+# ---- Parsing -------------------------------------------------------------
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+MULTILINE_CPP_IS_BRIEF = NO
+BUILTIN_STL_SUPPORT    = YES
+MARKDOWN_SUPPORT       = YES
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+INTERNAL_DOCS          = YES
+CASE_SENSE_NAMES       = YES
+SHOW_INCLUDE_FILES     = YES
+INLINE_INFO            = YES
+SORT_MEMBER_DOCS       = NO
+SORT_BRIEF_DOCS        = NO
+STRIP_FROM_PATH        = ..
+
+# ---- Output --------------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_COLORSTYLE        = LIGHT
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+
+# ---- Warnings / quiet mode ----------------------------------------------
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+
+# ---- Diagrams (graphviz not required) ------------------------------------
+HAVE_DOT               = NO
+
+# ---- Source browsing -----------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
