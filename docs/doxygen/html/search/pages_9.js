@@ -4,7 +4,7 @@ var searchData=
   ['falls_20through_20to_20tier_202_1',['nullopt so the caller falls through to Tier 2.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md12',1,'']]],
   ['false_20and_20the_20caller_20should_20return_20deadline_5fexceeded_20or_20unavailable_2',['false and the caller should return DEADLINE_EXCEEDED or UNAVAILABLE.',['../classllmgateway_1_1RequestQueue.html#autotoc_md19',1,'']]],
   ['fast_20lookup_3',['not on every request, so SelectReplica is a fast lookup.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md14',1,'']]],
-  ['features_4',['Features',['../index.html#autotoc_md34',1,'']]],
+  ['features_4',['Features',['../index.html#autotoc_md35',1,'']]],
   ['few_20hash_20positions_5',['around a few hash positions.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md11',1,'']]],
   ['fifo_20we_20use_20a_20ticket_20based_20system_6',['implementations). For strict FIFO, we use a ticket-based system.',['../classllmgateway_1_1RequestQueue.html#autotoc_md21',1,'']]],
   ['filters_7',['The cost is minimal (spurious wakeups are cheap; the predicate filters).',['../classllmgateway_1_1RequestQueue.html#autotoc_md20',1,'']]],

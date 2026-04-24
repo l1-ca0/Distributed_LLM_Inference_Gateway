@@ -4,6 +4,6 @@ var searchData=
   ['based_20system_1',['implementations). For strict FIFO, we use a ticket-based system.',['../classllmgateway_1_1RequestQueue.html#autotoc_md21',1,'']]],
   ['bottleneck_2',['(tens, not thousands) this is not a bottleneck.',['../classllmgateway_1_1CircuitBreakerManager.html#autotoc_md4',1,'']]],
   ['breakers_5f_3',['breakers_',['../classllmgateway_1_1CircuitBreakerManager.html#a15e44654507eb90dfde3e54a21ddc6ab',1,'llmgateway::CircuitBreakerManager']]],
-  ['building_4',['Building',['../index.html#autotoc_md37',1,'']]],
+  ['building_20and_20testing_4',['Building and Testing',['../index.html#autotoc_md37',1,'']]],
   ['by_20ack_5fmutex_5f_5',['tracking table guarded by ack_mutex_.',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md29',1,'']]]
 ];

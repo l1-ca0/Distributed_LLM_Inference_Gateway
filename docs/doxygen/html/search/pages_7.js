@@ -8,8 +8,9 @@ var searchData=
   ['degradation_5',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
   ['different_20paths_6',['tests exercise realistically different paths.',['../classllmgateway_1_1ReplicaServer.html#autotoc_md31',1,'']]],
   ['distributed_20llm_20inference_20gateway_7',['Distributed LLM Inference Gateway',['../index.html',1,'']]],
-  ['does_20not_8',['-1 triggers RecordFailure; 0 does not.',['../classllmgateway_1_1GatewayServer.html#autotoc_md9',1,'']]],
-  ['does_20not_20contend_9',['replicas does not contend.',['../classllmgateway_1_1CircuitBreakerManager.html#autotoc_md6',1,'']]],
-  ['due_20to_20cold_20start_20latency_20rather_20than_20true_20degradation_10',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
-  ['during_20routing_20decisions_11',['snapshot without holding the lock during routing decisions.',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md16',1,'']]]
+  ['documentation_8',['Documentation',['../index.html#autotoc_md33',1,'']]],
+  ['does_20not_9',['-1 triggers RecordFailure; 0 does not.',['../classllmgateway_1_1GatewayServer.html#autotoc_md9',1,'']]],
+  ['does_20not_20contend_10',['replicas does not contend.',['../classllmgateway_1_1CircuitBreakerManager.html#autotoc_md6',1,'']]],
+  ['due_20to_20cold_20start_20latency_20rather_20than_20true_20degradation_11',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
+  ['during_20routing_20decisions_12',['snapshot without holding the lock during routing decisions.',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md16',1,'']]]
 ];

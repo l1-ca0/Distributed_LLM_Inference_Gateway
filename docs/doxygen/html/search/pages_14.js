@@ -16,9 +16,9 @@ var searchData=
   ['state_20open_13',['the new state (OPEN).',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md2',1,'']]],
   ['streaming_20from_20it_14',['continues streaming from it.',['../classllmgateway_1_1GatewayServer.html#autotoc_md8',1,'']]],
   ['strict_20fifo_20we_20use_20a_20ticket_20based_20system_15',['implementations). For strict FIFO, we use a ticket-based system.',['../classllmgateway_1_1RequestQueue.html#autotoc_md21',1,'']]],
-  ['supported_20use_20inferconcurrent_20for_20parallelism_20instead_16',['not supported (use InferConcurrent for parallelism instead).',['../classllmgateway_1_1InferenceClient.html#autotoc_md0',1,'']]],
-  ['suspect_20list_20and_20promotes_20timed_20out_20suspects_20to_20dead_17',['4. Scans suspect list and promotes timed-out suspects to DEAD',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md25',1,'']]],
-  ['suspects_20to_20dead_18',['4. Scans suspect list and promotes timed-out suspects to DEAD',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md25',1,'']]],
-  ['system_19',['implementations). For strict FIFO, we use a ticket-based system.',['../classllmgateway_1_1RequestQueue.html#autotoc_md21',1,'']]],
-  ['systems_20',['Relation to Production Systems',['../index.html#autotoc_md35',1,'']]]
+  ['structure_16',['Project Structure',['../index.html#autotoc_md40',1,'']]],
+  ['supported_20use_20inferconcurrent_20for_20parallelism_20instead_17',['not supported (use InferConcurrent for parallelism instead).',['../classllmgateway_1_1InferenceClient.html#autotoc_md0',1,'']]],
+  ['suspect_20list_20and_20promotes_20timed_20out_20suspects_20to_20dead_18',['4. Scans suspect list and promotes timed-out suspects to DEAD',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md25',1,'']]],
+  ['suspects_20to_20dead_19',['4. Scans suspect list and promotes timed-out suspects to DEAD',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md25',1,'']]],
+  ['system_20',['implementations). For strict FIFO, we use a ticket-based system.',['../classllmgateway_1_1RequestQueue.html#autotoc_md21',1,'']]]
 ];

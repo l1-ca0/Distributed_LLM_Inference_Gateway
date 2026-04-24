@@ -6,6 +6,6 @@ var searchData=
   ['port_20already_20in_20use_3',['(e.g., port already in use).',['../classllmgateway_1_1gossip_1_1UdpTransport.html#autotoc_md30',1,'']]],
   ['positions_4',['around a few hash positions.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md11',1,'']]],
   ['predicate_20filters_5',['The cost is minimal (spurious wakeups are cheap; the predicate filters).',['../classllmgateway_1_1RequestQueue.html#autotoc_md20',1,'']]],
-  ['production_20systems_6',['Relation to Production Systems',['../index.html#autotoc_md35',1,'']]],
+  ['project_20structure_6',['Project Structure',['../index.html#autotoc_md40',1,'']]],
   ['promotes_20timed_20out_20suspects_20to_20dead_7',['4. Scans suspect list and promotes timed-out suspects to DEAD',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md25',1,'']]]
 ];

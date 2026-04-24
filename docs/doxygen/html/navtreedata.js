@@ -25,11 +25,15 @@
 var NAVTREE =
 [
   [ "Distributed LLM Inference Gateway", "index.html", [
-    [ "Architecture", "index.html#autotoc_md33", null ],
-    [ "Features", "index.html#autotoc_md34", null ],
-    [ "Relation to Production Systems", "index.html#autotoc_md35", null ],
+    [ "Documentation", "index.html#autotoc_md33", null ],
+    [ "Architecture", "index.html#autotoc_md34", null ],
+    [ "Features", "index.html#autotoc_md35", null ],
     [ "Tech Stack", "index.html#autotoc_md36", null ],
-    [ "Building", "index.html#autotoc_md37", null ],
+    [ "Building and Testing", "index.html#autotoc_md37", [
+      [ "Test output", "index.html#autotoc_md38", null ],
+      [ "Individual targets", "index.html#autotoc_md39", null ]
+    ] ],
+    [ "Project Structure", "index.html#autotoc_md40", null ],
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
       [ "Namespace Members", "namespacemembers.html", [
@@ -68,7 +72,7 @@ var NAVTREEINDEX =
 [
 "annotated.html",
 "classllmgateway_1_1RollingUpdater.html#a191dc6d20dd96e0a7f16e8cbc0b12be4",
-"namespacellmgateway.html#a6d1e634807200cc6dd9e4b9ee467420ba551b723eafd6a31d444fcb2f5920fbd3"
+"namespacellmgateway.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

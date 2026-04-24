@@ -10,13 +10,14 @@ var searchData=
   ['degradation_7',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
   ['different_20paths_8',['tests exercise realistically different paths.',['../classllmgateway_1_1ReplicaServer.html#autotoc_md31',1,'']]],
   ['distributed_20llm_20inference_20gateway_9',['Distributed LLM Inference Gateway',['../index.html',1,'']]],
-  ['does_20not_10',['-1 triggers RecordFailure; 0 does not.',['../classllmgateway_1_1GatewayServer.html#autotoc_md9',1,'']]],
-  ['does_20not_20contend_11',['replicas does not contend.',['../classllmgateway_1_1CircuitBreakerManager.html#autotoc_md6',1,'']]],
-  ['dopinground_12',['DoPingRound',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a94da7298f2a90b8b03dac5b64dd1e22d',1,'llmgateway::gossip::SwimProtocol']]],
-  ['drain_13',['Drain',['../classllmgateway_1_1ReplicaServer.html#a6f9ea799304bafaab26b834b124cd1da',1,'llmgateway::ReplicaServer']]],
-  ['draining_14',['draining',['../structllmgateway_1_1ReplicaInfo.html#a5950ec14c09c8aade814364135642a5e',1,'llmgateway::ReplicaInfo']]],
-  ['draining_5f_15',['draining_',['../classllmgateway_1_1ReplicaServer.html#ac028b035cf5a4a24186d5b02c8a3123e',1,'llmgateway::ReplicaServer']]],
-  ['drainreplica_16',['DrainReplica',['../classllmgateway_1_1RollingUpdater.html#a191dc6d20dd96e0a7f16e8cbc0b12be4',1,'llmgateway::RollingUpdater']]],
-  ['due_20to_20cold_20start_20latency_20rather_20than_20true_20degradation_17',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
-  ['during_20routing_20decisions_18',['snapshot without holding the lock during routing decisions.',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md16',1,'']]]
+  ['documentation_10',['Documentation',['../index.html#autotoc_md33',1,'']]],
+  ['does_20not_11',['-1 triggers RecordFailure; 0 does not.',['../classllmgateway_1_1GatewayServer.html#autotoc_md9',1,'']]],
+  ['does_20not_20contend_12',['replicas does not contend.',['../classllmgateway_1_1CircuitBreakerManager.html#autotoc_md6',1,'']]],
+  ['dopinground_13',['DoPingRound',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a94da7298f2a90b8b03dac5b64dd1e22d',1,'llmgateway::gossip::SwimProtocol']]],
+  ['drain_14',['Drain',['../classllmgateway_1_1ReplicaServer.html#a6f9ea799304bafaab26b834b124cd1da',1,'llmgateway::ReplicaServer']]],
+  ['draining_15',['draining',['../structllmgateway_1_1ReplicaInfo.html#a5950ec14c09c8aade814364135642a5e',1,'llmgateway::ReplicaInfo']]],
+  ['draining_5f_16',['draining_',['../classllmgateway_1_1ReplicaServer.html#ac028b035cf5a4a24186d5b02c8a3123e',1,'llmgateway::ReplicaServer']]],
+  ['drainreplica_17',['DrainReplica',['../classllmgateway_1_1RollingUpdater.html#a191dc6d20dd96e0a7f16e8cbc0b12be4',1,'llmgateway::RollingUpdater']]],
+  ['due_20to_20cold_20start_20latency_20rather_20than_20true_20degradation_18',['requests might fail due to cold-start latency rather than true degradation.',['../classllmgateway_1_1CircuitBreaker.html#autotoc_md3',1,'']]],
+  ['during_20routing_20decisions_19',['snapshot without holding the lock during routing decisions.',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md16',1,'']]]
 ];

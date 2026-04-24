@@ -21,12 +21,13 @@ var searchData=
   ['and_20load_20information_20without_20dedicated_20gossip_20rounds_18',['spreading membership and load information without dedicated gossip rounds.',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md27',1,'']]],
   ['and_20notifying_20the_20condition_5fvariable_19',['true and notifying the condition_variable.',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md28',1,'']]],
   ['and_20promotes_20timed_20out_20suspects_20to_20dead_20',['4. Scans suspect list and promotes timed-out suspects to DEAD',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md25',1,'']]],
-  ['and_20the_20caller_20should_20return_20deadline_5fexceeded_20or_20unavailable_21',['false and the caller should return DEADLINE_EXCEEDED or UNAVAILABLE.',['../classllmgateway_1_1RequestQueue.html#autotoc_md19',1,'']]],
-  ['any_20retry_20this_20signals_20the_20client_20to_20back_20off_20or_20queue_20locally_22',['any retry). This signals the client to back off or queue locally.',['../classllmgateway_1_1GatewayServer.html#autotoc_md7',1,'']]],
-  ['application_20level_20health_20complementing_20gossip_20level_20health_23',['errors (application-level health, complementing gossip-level health).',['../classllmgateway_1_1GatewayServer.html#autotoc_md10',1,'']]],
-  ['applyupdate_24',['ApplyUpdate',['../classllmgateway_1_1gossip_1_1MembershipList.html#ac2e8e4a01bdc498827d7d182b6034c61',1,'llmgateway::gossip::MembershipList']]],
-  ['architecture_25',['Architecture',['../index.html#autotoc_md33',1,'']]],
-  ['are_20cheap_20the_20predicate_20filters_26',['The cost is minimal (spurious wakeups are cheap; the predicate filters).',['../classllmgateway_1_1RequestQueue.html#autotoc_md20',1,'']]],
-  ['around_20a_20few_20hash_20positions_27',['around a few hash positions.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md11',1,'']]],
-  ['atomic_20not_20the_20map_20itself_28',['the atomic, not the map itself).',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md18',1,'']]]
+  ['and_20testing_21',['Building and Testing',['../index.html#autotoc_md37',1,'']]],
+  ['and_20the_20caller_20should_20return_20deadline_5fexceeded_20or_20unavailable_22',['false and the caller should return DEADLINE_EXCEEDED or UNAVAILABLE.',['../classllmgateway_1_1RequestQueue.html#autotoc_md19',1,'']]],
+  ['any_20retry_20this_20signals_20the_20client_20to_20back_20off_20or_20queue_20locally_23',['any retry). This signals the client to back off or queue locally.',['../classllmgateway_1_1GatewayServer.html#autotoc_md7',1,'']]],
+  ['application_20level_20health_20complementing_20gossip_20level_20health_24',['errors (application-level health, complementing gossip-level health).',['../classllmgateway_1_1GatewayServer.html#autotoc_md10',1,'']]],
+  ['applyupdate_25',['ApplyUpdate',['../classllmgateway_1_1gossip_1_1MembershipList.html#ac2e8e4a01bdc498827d7d182b6034c61',1,'llmgateway::gossip::MembershipList']]],
+  ['architecture_26',['Architecture',['../index.html#autotoc_md34',1,'']]],
+  ['are_20cheap_20the_20predicate_20filters_27',['The cost is minimal (spurious wakeups are cheap; the predicate filters).',['../classllmgateway_1_1RequestQueue.html#autotoc_md20',1,'']]],
+  ['around_20a_20few_20hash_20positions_28',['around a few hash positions.',['../classllmgateway_1_1LoadBalancer.html#autotoc_md11',1,'']]],
+  ['atomic_20not_20the_20map_20itself_29',['the atomic, not the map itself).',['../classllmgateway_1_1ReplicaRegistry.html#autotoc_md18',1,'']]]
 ];

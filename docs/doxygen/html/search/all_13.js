@@ -16,7 +16,7 @@ var searchData=
   ['predicate_20filters_13',['The cost is minimal (spurious wakeups are cheap; the predicate filters).',['../classllmgateway_1_1RequestQueue.html#autotoc_md20',1,'']]],
   ['probe_5fin_5fflight_5f_14',['probe_in_flight_',['../classllmgateway_1_1CircuitBreaker.html#a5257510c2febf67a01408dabe5e6c451',1,'llmgateway::CircuitBreaker']]],
   ['processpiggybackedupdates_15',['ProcessPiggybackedUpdates',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#a8cb4132045b016ad959613b655886679',1,'llmgateway::gossip::SwimProtocol']]],
-  ['production_20systems_16',['Relation to Production Systems',['../index.html#autotoc_md35',1,'']]],
+  ['project_20structure_16',['Project Structure',['../index.html#autotoc_md40',1,'']]],
   ['promotes_20timed_20out_20suspects_20to_20dead_17',['4. Scans suspect list and promotes timed-out suspects to DEAD',['../classllmgateway_1_1gossip_1_1SwimProtocol.html#autotoc_md25',1,'']]],
   ['protocol_5fperiod_5fms_18',['protocol_period_ms',['../structllmgateway_1_1gossip_1_1SwimConfig.html#a0f985923629ed1d6834d0261a590e8e7',1,'llmgateway::gossip::SwimConfig']]]
 ];
