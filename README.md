@@ -5,7 +5,7 @@ A high-performance inference gateway in C++17 that routes client requests to a c
 ## Documentation
 
 - **Final report** — [`docs/final_report.pdf`](docs/final_report.pdf)
-- **Code API docs** — [l1-ca0.github.io/Distributed_LLM_Inference_Gateway](https://l1-ca0.github.io/Distributed_LLM_Inference_Gateway/) (served via GitHub Pages)
+- **Code API docs** — open `docs/doxygen/html/index.html` in a browser. Doxygen-generated class and file reference.
 
 ## Architecture
 
