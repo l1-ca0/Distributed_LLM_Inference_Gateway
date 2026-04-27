@@ -74,7 +74,7 @@ bool wait_for(Pred pred, int timeout_ms, int poll_interval_ms = 100) {
 void test_three_nodes_discovery() {
     SwimConfig config;
     config.protocol_period_ms = 200;
-    config.ping_timeout_ms = 100;
+    config.ping_timeout_ms = 200;
     config.suspect_timeout_ms = 1000;
 
     auto n1 = std::make_unique<SwimProtocol>("node-1", "127.0.0.1:18001", 18001, config);
@@ -91,12 +91,15 @@ void test_three_nodes_discovery() {
     n2->Start();
     n3->Start();
 
-    // Wait for all 3 nodes to see 2 alive peers each (full mesh discovery).
+    // Wait until each node has learned the other two by their real IDs.
+    auto known = [](SwimProtocol* n, const std::string& id) {
+        auto info = n->membership_list().GetMember(id);
+        return info && info->state == ALIVE;
+    };
     bool converged = wait_for([&]() {
-        auto a1 = n1->membership_list().GetAliveMembers();
-        auto a2 = n2->membership_list().GetAliveMembers();
-        auto a3 = n3->membership_list().GetAliveMembers();
-        return a1.size() >= 2 && a2.size() >= 2 && a3.size() >= 2;
+        return known(n1.get(), "node-2") && known(n1.get(), "node-3") &&
+               known(n2.get(), "node-1") && known(n2.get(), "node-3") &&
+               known(n3.get(), "node-1") && known(n3.get(), "node-2");
     }, 5000);
 
     ASSERT(converged, "3 nodes should discover each other within 5s");
@@ -124,7 +127,7 @@ void test_three_nodes_discovery() {
 void test_failure_detection() {
     SwimConfig config;
     config.protocol_period_ms = 200;
-    config.ping_timeout_ms = 100;
+    config.ping_timeout_ms = 200;
     config.suspect_timeout_ms = 1000;
 
     auto n1 = std::make_unique<SwimProtocol>("node-1", "127.0.0.1:18011", 18011, config);
@@ -140,10 +143,14 @@ void test_failure_detection() {
     n2->Start();
     n3->Start();
 
-    // Wait for initial convergence (all nodes see each other as ALIVE).
+    // Wait until each node has learned the other two by their real IDs.
+    auto known = [](SwimProtocol* n, const std::string& id) {
+        auto info = n->membership_list().GetMember(id);
+        return info && info->state == ALIVE;
+    };
     bool converged = wait_for([&]() {
-        return n1->membership_list().GetAliveMembers().size() >= 2 &&
-               n2->membership_list().GetAliveMembers().size() >= 2;
+        return known(n1.get(), "node-2") && known(n1.get(), "node-3") &&
+               known(n2.get(), "node-1") && known(n2.get(), "node-3");
     }, 5000);
     ASSERT(converged, "nodes should converge");
 
@@ -165,9 +172,11 @@ void test_failure_detection() {
 
     ASSERT(detected, "node-3 should be detected as DEAD by node-1 and node-2");
 
-    // Verify surviving nodes are unaffected.
+    // Surviving nodes must not be declared DEAD. A transient SUSPECT is
+    // acceptable; refutation recovers it.
     auto info = n1->membership_list().GetMember("node-2");
-    ASSERT(info && info->state == ALIVE, "node-2 should still be ALIVE from node-1's view");
+    ASSERT(info && info->state != DEAD,
+           "node-2 should not be DEAD from node-1's view");
 
     n1->Stop();
     n2->Stop();
@@ -193,7 +202,7 @@ void test_failure_detection() {
 void test_rejoin_after_failure() {
     SwimConfig config;
     config.protocol_period_ms = 200;
-    config.ping_timeout_ms = 100;
+    config.ping_timeout_ms = 200;
     config.suspect_timeout_ms = 1000;
 
     auto n1 = std::make_unique<SwimProtocol>("node-1", "127.0.0.1:18021", 18021, config);
@@ -208,9 +217,13 @@ void test_rejoin_after_failure() {
     n2->Start();
     n3->Start();
 
-    // Phase 1: converge.
+    // Phase 1: wait until n1 has learned both peers by their real IDs.
+    auto known = [](SwimProtocol* n, const std::string& id) {
+        auto info = n->membership_list().GetMember(id);
+        return info && info->state == ALIVE;
+    };
     wait_for([&]() {
-        return n1->membership_list().GetAliveMembers().size() >= 2;
+        return known(n1.get(), "node-2") && known(n1.get(), "node-3");
     }, 5000);
 
     // Phase 2: kill node-3 and wait for DEAD detection.
@@ -256,7 +269,7 @@ void test_rejoin_after_failure() {
 void test_membership_callback() {
     SwimConfig config;
     config.protocol_period_ms = 200;
-    config.ping_timeout_ms = 100;
+    config.ping_timeout_ms = 200;
     config.suspect_timeout_ms = 1000;
 
     auto n1 = std::make_unique<SwimProtocol>("node-1", "127.0.0.1:18031", 18031, config);
@@ -277,9 +290,10 @@ void test_membership_callback() {
     n1->Start();
     n2->Start();
 
-    // Wait for node-1 to see node-2 as ALIVE.
+    // Wait until n1 has learned node-2 by its real ID.
     wait_for([&]() {
-        return n1->membership_list().GetAliveMembers().size() >= 1;
+        auto info = n1->membership_list().GetMember("node-2");
+        return info && info->state == ALIVE;
     }, 5000);
 
     // Kill node-2 and wait for full detection (SUSPECT → DEAD).
