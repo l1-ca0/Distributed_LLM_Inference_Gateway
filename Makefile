@@ -7,6 +7,7 @@ CMAKE_VERSION := 3.27.9
 PORTABLE_CMAKE_DIR := $(BUILD_DIR)/cmake-$(CMAKE_VERSION)-linux-x86_64
 PORTABLE_CMAKE_URL := https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-linux-x86_64.tar.gz
 
+.SILENT:
 .PHONY: all build test clean deps
 
 # Default target: bootstrap dependencies (if needed), build everything, run tests
@@ -27,7 +28,7 @@ deps:
 			wget -qO- $(PORTABLE_CMAKE_URL) | tar xz -C $(BUILD_DIR); \
 		  else \
 			echo "Error: need curl or wget to bootstrap cmake" >&2; exit 1; \
-		  fi ) > $$LOG 2>&1 || (cat $$LOG; exit 1); \
+		  fi ) > $$LOG 2>&1 || { echo "deps step failed; last 200 lines of $$LOG:"; tail -200 $$LOG; exit 1; }; \
 	fi
 
 # Build all binaries. gRPC and Protobuf are pulled in via CMake FetchContent
@@ -43,10 +44,10 @@ build: deps
 			-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 			-DUSE_SYSTEM_GRPC=$$USE_GRPC \
 			-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-			> $$LOG 2>&1 || (cat $$LOG; exit 1); \
+			> $$LOG 2>&1 || { echo "cmake configure failed; last 200 lines of $$LOG:"; tail -200 $$LOG; exit 1; }; \
 	fi; \
 	cmake --build $(BUILD_DIR) -j$(NPROC) \
-		>> $$LOG 2>&1 || (cat $$LOG; exit 1)
+		>> $$LOG 2>&1 || { echo "build failed; last 200 lines of $$LOG:"; tail -200 $$LOG; exit 1; }
 
 # Run the test suite
 test: build
