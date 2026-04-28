@@ -75,9 +75,13 @@ void test_cluster_failure_detection() {
 
     ASSERT(detected, "gateway should see r3 as DEAD within 8s");
 
-    // r1 and r2 should still be alive.
-    auto r1 = cluster.GetGatewayViewOfReplica("r1");
-    ASSERT(r1 && r1->state == ALIVE, "r1 should still be ALIVE");
+    // Surviving nodes may transiently appear SUSPECT and refute back to
+    // ALIVE within one probe period, so poll rather than snapshot.
+    bool r1_alive = wait_for([&]() {
+        auto info = cluster.GetGatewayViewOfReplica("r1");
+        return info && info->state == ALIVE;
+    }, 5000);
+    ASSERT(r1_alive, "r1 should be ALIVE (no false DEAD)");
 }
 
 // ---------------------------------------------------------------------------
