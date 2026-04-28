@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <mutex>
 #include <random>
 
 #include "common/log.h"

@@ -8,6 +8,7 @@
 #include "tests/test_cluster.h"
 
 #include <chrono>
+#include <mutex>
 #include <thread>
 
 #include "common/log.h"

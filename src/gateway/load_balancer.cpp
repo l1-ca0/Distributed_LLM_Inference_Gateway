@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <limits>
+#include <mutex>
 #include <random>
 
 #include "common/log.h"

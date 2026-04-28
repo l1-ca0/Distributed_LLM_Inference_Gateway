@@ -1,5 +1,8 @@
 #include "gateway/replica_registry.h"
 
+#include <mutex>
+#include <shared_mutex>
+
 #include "common/log.h"
 
 namespace llmgateway {

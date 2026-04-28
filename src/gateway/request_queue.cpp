@@ -1,5 +1,8 @@
 #include "gateway/request_queue.h"
 
+#include <condition_variable>
+#include <mutex>
+
 #include "common/log.h"
 
 namespace llmgateway {

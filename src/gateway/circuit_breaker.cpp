@@ -1,5 +1,7 @@
 #include "gateway/circuit_breaker.h"
 
+#include <mutex>
+
 #include "common/log.h"
 
 namespace llmgateway {

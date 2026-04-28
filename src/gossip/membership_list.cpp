@@ -1,6 +1,7 @@
 #include "gossip/membership_list.h"
 
 #include <algorithm>
+#include <mutex>
 #include <random>
 
 namespace llmgateway::gossip {
