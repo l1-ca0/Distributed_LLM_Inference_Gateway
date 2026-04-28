@@ -203,15 +203,13 @@ grpc::Status GatewayServer::InferHedged(grpc::ServerContext* context,
                             "no replica available for hedging");
     }
 
-    // For the second replica, we need a different one. Temporarily increment
-    // the first replica's active count so the LB deprioritizes it.
-    registry_.IncrementActive(sel1->replica_id);
-    auto sel2 = lb_.SelectReplica(prompt + "_hedge");  // different hash to get different replica
-    registry_.DecrementActive(sel1->replica_id);
+    // Excluding sel1 guarantees sel2 is a different replica: a different
+    // hash alone can collide back onto sel1's ring partition.
+    std::unordered_set<std::string> hedge_excluded = {sel1->replica_id};
+    auto sel2 = lb_.SelectReplica(prompt + "_hedge", hedge_excluded);
 
     if (!sel2 || sel2->replica_id == sel1->replica_id) {
         // Only one replica available — fall through to non-hedged path.
-        // Re-select since we decremented.
         registry_.IncrementActive(sel1->replica_id);
         int streamed = StreamFromReplica(sel1->replica_id, sel1->grpc_address,
                                          prompt, max_tokens, 0, writer, context);
