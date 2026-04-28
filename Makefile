@@ -14,20 +14,20 @@ all: build test
 
 # Bootstrap cmake on systems that don't already have it, by downloading
 # Kitware's portable Linux x86_64 binary into build/. A no-op on a
-# developer machine with cmake in PATH.
+# developer machine with cmake in PATH. All install output is captured
+# to build/install.log; on failure the captured log is printed.
 deps:
 	@mkdir -p $(BUILD_DIR)
-	@if ! command -v cmake >/dev/null 2>&1; then \
-		if [ ! -x $(PORTABLE_CMAKE_DIR)/bin/cmake ]; then \
-			echo "Downloading portable cmake $(CMAKE_VERSION)..."; \
-			if command -v curl >/dev/null 2>&1; then \
-				curl -fsSL $(PORTABLE_CMAKE_URL) | tar xz -C $(BUILD_DIR); \
-			elif command -v wget >/dev/null 2>&1; then \
-				wget -qO- $(PORTABLE_CMAKE_URL) | tar xz -C $(BUILD_DIR); \
-			else \
-				echo "Error: need curl or wget to bootstrap cmake"; exit 1; \
-			fi; \
-		fi; \
+	@LOG=$(BUILD_DIR)/install.log; \
+	if ! command -v cmake >/dev/null 2>&1 \
+	   && [ ! -x $(PORTABLE_CMAKE_DIR)/bin/cmake ]; then \
+		( if command -v curl >/dev/null 2>&1; then \
+			curl -fsSL $(PORTABLE_CMAKE_URL) | tar xz -C $(BUILD_DIR); \
+		  elif command -v wget >/dev/null 2>&1; then \
+			wget -qO- $(PORTABLE_CMAKE_URL) | tar xz -C $(BUILD_DIR); \
+		  else \
+			echo "Error: need curl or wget to bootstrap cmake" >&2; exit 1; \
+		  fi ) > $$LOG 2>&1 || (cat $$LOG; exit 1); \
 	fi
 
 # Build all binaries. gRPC and Protobuf are pulled in via CMake FetchContent
