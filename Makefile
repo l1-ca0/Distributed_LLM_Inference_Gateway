@@ -2,45 +2,51 @@ BUILD_DIR := build
 CMAKE_BUILD_TYPE ?= Release
 NPROC := $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
+# Portable cmake binary bootstrapped into build/ when the host has no cmake.
+CMAKE_VERSION := 3.27.9
+PORTABLE_CMAKE_DIR := $(BUILD_DIR)/cmake-$(CMAKE_VERSION)-linux-x86_64
+PORTABLE_CMAKE_URL := https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-linux-x86_64.tar.gz
+
 .PHONY: all build test clean deps
 
-# Default target: install dependencies (if needed), build everything, run tests
+# Default target: bootstrap dependencies (if needed), build everything, run tests
 all: build test
 
-# Install build dependencies on Debian/Ubuntu systems if they are missing.
-# A no-op when cmake, protoc, and grpc++ headers are already present (e.g.
-# on a developer machine with brew or an autograder image with deps cached).
+# Bootstrap cmake on systems that don't already have it, by downloading
+# Kitware's portable Linux x86_64 binary into build/. A no-op on a
+# developer machine with cmake in PATH.
 deps:
-	@if ! (command -v cmake >/dev/null 2>&1 \
-	       && command -v protoc >/dev/null 2>&1 \
-	       && pkg-config --exists grpc++ 2>/dev/null); then \
-		echo "Installing build dependencies (cmake, gRPC, Protobuf)..."; \
-		(sudo -n apt-get update -qq 2>/dev/null \
-		 && sudo -n apt-get install -y -qq \
-		    cmake build-essential pkg-config \
-		    libgrpc++-dev libprotobuf-dev \
-		    protobuf-compiler protobuf-compiler-grpc) \
-		|| (apt-get update -qq \
-		    && apt-get install -y -qq \
-		       cmake build-essential pkg-config \
-		       libgrpc++-dev libprotobuf-dev \
-		       protobuf-compiler protobuf-compiler-grpc); \
+	@mkdir -p $(BUILD_DIR)
+	@if ! command -v cmake >/dev/null 2>&1; then \
+		if [ ! -x $(PORTABLE_CMAKE_DIR)/bin/cmake ]; then \
+			echo "Downloading portable cmake $(CMAKE_VERSION)..."; \
+			if command -v curl >/dev/null 2>&1; then \
+				curl -fsSL $(PORTABLE_CMAKE_URL) | tar xz -C $(BUILD_DIR); \
+			elif command -v wget >/dev/null 2>&1; then \
+				wget -qO- $(PORTABLE_CMAKE_URL) | tar xz -C $(BUILD_DIR); \
+			else \
+				echo "Error: need curl or wget to bootstrap cmake"; exit 1; \
+			fi; \
+		fi; \
 	fi
 
-# Build all binaries. Build output is silenced on success; on failure
-# the captured log is printed and make exits non-zero.
+# Build all binaries. gRPC and Protobuf are pulled in via CMake FetchContent
+# so no system-level package install is needed. Build output is silenced
+# on success; on failure the captured log is printed and make exits non-zero.
 build: deps
 	@mkdir -p $(BUILD_DIR)
-	@USE_GRPC=$$(pkg-config --exists grpc++ 2>/dev/null && echo ON || echo OFF); \
+	@PATH="$(PORTABLE_CMAKE_DIR)/bin:$$PATH"; export PATH; \
+	USE_GRPC=$$(pkg-config --exists grpc++ 2>/dev/null && echo ON || echo OFF); \
+	LOG=$(BUILD_DIR)/build.log; \
 	if [ ! -f $(BUILD_DIR)/CMakeCache.txt ]; then \
-		cd $(BUILD_DIR) && cmake .. \
+		cmake -S . -B $(BUILD_DIR) \
 			-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 			-DUSE_SYSTEM_GRPC=$$USE_GRPC \
 			-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-			> build.log 2>&1 || (cat build.log; exit 1); \
-	fi
-	@cd $(BUILD_DIR) && cmake --build . -j$(NPROC) \
-		>> build.log 2>&1 || (cat build.log; exit 1)
+			> $$LOG 2>&1 || (cat $$LOG; exit 1); \
+	fi; \
+	cmake --build $(BUILD_DIR) -j$(NPROC) \
+		>> $$LOG 2>&1 || (cat $$LOG; exit 1)
 
 # Run the test suite
 test: build
