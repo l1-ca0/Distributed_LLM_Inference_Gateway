@@ -12,8 +12,8 @@
 //   (b) The winning replica is the fast one (the first replica_id in each
 //       response corresponds to where tokens came from).
 //   (c) Total wall-time is dominated by fast-path latency, not slow-path.
-//       With 5 serial requests, fast (50ms/token * 10 tokens ≈ 500ms) each,
-//       total ≈ 2.5–3s. Pure-slow would be 5 * 3s = 15s.
+//       With 5 serial requests, fast (30ms/token * 10 tokens ≈ 300ms) each,
+//       total ≈ 1.5–2s. Pure-slow would be 5 * 5s = 25s.
 //   (d) The slow replica returns to zero in-flight requests shortly after
 //       (the loser's stream was cancelled cleanly, not abandoned).
 
@@ -29,13 +29,11 @@ namespace llmgateway {
 
 TestResult test9_request_hedging() {
     return run_test("Test 9: Request Hedging", 15, [] {
-        // Fast replica 50ms/token, slow replica 300ms/token — a 6×
-        // latency gap that makes fast-path dominance unambiguous.
         TestCluster cluster;
         cluster.AddReplica("fast",
-                           {.token_delay_ms = 50, .max_capacity = 16});
+                           {.token_delay_ms = 30, .max_capacity = 16});
         cluster.AddReplica("slow",
-                           {.token_delay_ms = 300, .max_capacity = 16});
+                           {.token_delay_ms = 500, .max_capacity = 16});
         cluster.StartGateway();
         ASSERT(cluster.WaitForConvergence(5000), "initial convergence");
 
@@ -75,15 +73,11 @@ TestResult test9_request_hedging() {
                        r.replica_ids[0]);
         }
 
-        // (c) Wall-time is fast-path dominated. Expected per-request
-        // latency is ~500ms (10 tokens × 50ms on the fast replica), so
-        // 5 serial requests ≈ 2.5s. Slow-replica baseline would be 5 × 3s
-        // = 15s. Assert < 5s: comfortably above the 2.5s best case plus
-        // gRPC overhead, clearly below the slow-path baseline.
+        // (c) Wall-time is fast-path dominated. Slow-replica baseline would
+        // be 5 × 5s = 25s; assert well below that.
         ASSERT(elapsed_ms < 5000,
                "hedged requests wall-time " + std::to_string(elapsed_ms) +
                    "ms should be fast-path dominated (<5s for 5*10 tokens)");
-        // Per-request average should hover around 500ms for the fast path.
         double per_request_ms = static_cast<double>(elapsed_ms) / N;
         ASSERT(per_request_ms < 1000,
                "average per-hedged-request time " +

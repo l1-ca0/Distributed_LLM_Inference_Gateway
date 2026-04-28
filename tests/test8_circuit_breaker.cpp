@@ -18,7 +18,7 @@
 //     and normal routing resumes.
 //
 // Pass criteria:
-//   (a) Despite r3 failing, all 20 client requests succeed — the gateway
+//   (a) Despite r3 failing, all client requests succeed — the gateway
 //       routes around the bad replica via mid-stream failover and the
 //       excluded-set machinery the retry loop uses.
 //   (b) r3's circuit transitions to OPEN state.
@@ -39,25 +39,27 @@ namespace llmgateway {
 TestResult test8_circuit_breaker() {
     return run_test("Test 8: Circuit Breaker", 20, [] {
         TestCluster cluster;
-        cluster.AddReplica("r1", {.token_delay_ms = 10, .max_capacity = 16});
-        cluster.AddReplica("r2", {.token_delay_ms = 10, .max_capacity = 16});
-        cluster.AddReplica("r3", {.token_delay_ms = 10, .max_capacity = 16});
+        cluster.AddReplica("r1", {.token_delay_ms = 10, .max_capacity = 64});
+        cluster.AddReplica("r2", {.token_delay_ms = 10, .max_capacity = 64});
+        cluster.AddReplica("r3", {.token_delay_ms = 10, .max_capacity = 64});
         cluster.StartGateway();
         ASSERT(cluster.WaitForConvergence(6000), "initial convergence");
 
         // Part 1 — degrade r3 and send enough traffic to trip its circuit.
         cluster.GetReplica("r3")->set_reject_all(true);
 
-        // Fire 20 requests with unique prompts so the hash distributes them
-        // across the ring; a predictable fraction lands on r3 and fails.
+        // Unique prompts spread across the ring; enough land on r3 to fill
+        // the CB window (size 10) and trip the circuit.
+        constexpr int kRequests = 50;
         auto results = InferenceClient::InferConcurrent(
-            cluster.GetGatewayAddress(), 20, "c", "cb-prompt", 2);
+            cluster.GetGatewayAddress(), kRequests, "c", "cb-prompt", 2);
         int ok = 0;
         for (const auto& r : results) {
             if (r.success) ok++;
         }
-        ASSERT(ok == 20,
-               "all 20 requests should succeed via failover around r3, got " +
+        ASSERT(ok == kRequests,
+               "all " + std::to_string(kRequests) +
+                   " requests should succeed via failover around r3, got " +
                    std::to_string(ok));
 
         // (b) r3's circuit should be OPEN (or HALF_OPEN if cooldown already
