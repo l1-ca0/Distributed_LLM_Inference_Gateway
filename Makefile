@@ -2,22 +2,40 @@ BUILD_DIR := build
 CMAKE_BUILD_TYPE ?= Release
 NPROC := $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
-# Use an installed gRPC if available; otherwise build it via FetchContent.
-USE_SYSTEM_GRPC ?= $(shell pkg-config --exists grpc++ 2>/dev/null && echo ON || echo OFF)
+.PHONY: all build test clean deps
 
-.PHONY: all build test clean
-
-# Default target: build everything and run tests
+# Default target: install dependencies (if needed), build everything, run tests
 all: build test
+
+# Install build dependencies on Debian/Ubuntu systems if they are missing.
+# A no-op when cmake, protoc, and grpc++ headers are already present (e.g.
+# on a developer machine with brew or an autograder image with deps cached).
+deps:
+	@if ! (command -v cmake >/dev/null 2>&1 \
+	       && command -v protoc >/dev/null 2>&1 \
+	       && pkg-config --exists grpc++ 2>/dev/null); then \
+		echo "Installing build dependencies (cmake, gRPC, Protobuf)..."; \
+		(sudo -n apt-get update -qq 2>/dev/null \
+		 && sudo -n apt-get install -y -qq \
+		    cmake build-essential pkg-config \
+		    libgrpc++-dev libprotobuf-dev \
+		    protobuf-compiler protobuf-compiler-grpc) \
+		|| (apt-get update -qq \
+		    && apt-get install -y -qq \
+		       cmake build-essential pkg-config \
+		       libgrpc++-dev libprotobuf-dev \
+		       protobuf-compiler protobuf-compiler-grpc); \
+	fi
 
 # Build all binaries. Build output is silenced on success; on failure
 # the captured log is printed and make exits non-zero.
-build:
+build: deps
 	@mkdir -p $(BUILD_DIR)
-	@if [ ! -f $(BUILD_DIR)/CMakeCache.txt ]; then \
+	@USE_GRPC=$$(pkg-config --exists grpc++ 2>/dev/null && echo ON || echo OFF); \
+	if [ ! -f $(BUILD_DIR)/CMakeCache.txt ]; then \
 		cd $(BUILD_DIR) && cmake .. \
 			-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
-			-DUSE_SYSTEM_GRPC=$(USE_SYSTEM_GRPC) \
+			-DUSE_SYSTEM_GRPC=$$USE_GRPC \
 			-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
 			> build.log 2>&1 || (cat build.log; exit 1); \
 	fi
