@@ -10,16 +10,19 @@ USE_SYSTEM_GRPC ?= $(shell pkg-config --exists grpc++ 2>/dev/null && echo ON || 
 # Default target: build everything and run tests
 all: build test
 
-# Build all binaries
+# Build all binaries. Build output is silenced on success; on failure
+# the captured log is printed and make exits non-zero.
 build:
 	@mkdir -p $(BUILD_DIR)
 	@if [ ! -f $(BUILD_DIR)/CMakeCache.txt ]; then \
 		cd $(BUILD_DIR) && cmake .. \
 			-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 			-DUSE_SYSTEM_GRPC=$(USE_SYSTEM_GRPC) \
-			-DCMAKE_POLICY_VERSION_MINIMUM=3.5; \
+			-DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+			> build.log 2>&1 || (cat build.log; exit 1); \
 	fi
-	@cd $(BUILD_DIR) && cmake --build . -j$(NPROC)
+	@cd $(BUILD_DIR) && cmake --build . -j$(NPROC) \
+		>> build.log 2>&1 || (cat build.log; exit 1)
 
 # Run the test suite
 test: build

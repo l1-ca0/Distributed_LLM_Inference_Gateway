@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Silence deprecated-API warnings from system gRPC headers; real errors and
+# unrelated warnings still surface.
+add_compile_options(-Wno-deprecated-declarations)
+
 # ============================================================================
 # Dependencies: gRPC and Protobuf
 #
